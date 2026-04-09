@@ -1,41 +1,39 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { OverviewCounts, OverviewCountsResponse } from "@/lib/overview/types";
+import { shiftDays, toYmd } from "@/lib/overview/date-range";
+import type {
+  OverviewCounts,
+  OverviewCountsResponse,
+  OverviewDisplayMetricKey,
+} from "@/lib/overview/types";
 
 function formatRangeLabel(from: string, to: string) {
   return `${from} → ${to}`;
 }
 
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function toYmd(d: Date) {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function shiftDays(ymd: string, delta: number): string {
-  const [y, m, day] = ymd.split("-").map(Number);
-  const d = new Date(y, m - 1, day);
-  d.setDate(d.getDate() + delta);
-  return toYmd(d);
-}
-
 const METRICS: {
-  key: keyof OverviewCounts;
+  key: OverviewDisplayMetricKey;
   label: string;
+  navLabel?: string;
   hint: string;
   accent: string;
 }[] = [
-  { key: "users", label: "Users", hint: "Distinct users with last seen in range", accent: "#4ade80" },
-  { key: "sessions", label: "Sessions", hint: "Sessions started in range", accent: "#38bdf8" },
-  { key: "questions", label: "Questions", hint: "Questions logged", accent: "#a78bfa" },
-  { key: "errors", label: "Errors", hint: "Error events", accent: "#fb923c" },
-  { key: "asrLogs", label: "ASR logs", hint: "Speech transcripts", accent: "#fbbf24" },
-  { key: "ttsLogs", label: "TTS logs", hint: "Text-to-speech lines", accent: "#2dd4bf" },
-  { key: "toolCalls", label: "Tool calls", hint: "Tool invocations", accent: "#4ade80" },
+  { key: "users", label: "Users", hint: "Total users in the database", accent: "#4ade80" },
+  { key: "sessions", label: "Sessions", hint: "Total sessions recorded", accent: "#38bdf8" },
+  { key: "questions", label: "Questions", hint: "Total questions logged", accent: "#a78bfa" },
+  { key: "errors", label: "Errors", hint: "Total error events", accent: "#fb923c" },
+  { key: "asrLogs", label: "ASR logs", navLabel: "ASR", hint: "Total speech transcripts", accent: "#fbbf24" },
+  { key: "ttsLogs", label: "TTS logs", navLabel: "TTS", hint: "Total text-to-speech lines", accent: "#2dd4bf" },
+  { key: "toolCalls", label: "Tool calls", hint: "Total tool invocations", accent: "#4ade80" },
 ];
+
+/** Sidebar / anchor ids — keep in sync with `metric-*` elements below. */
+export const OVERVIEW_METRIC_NAV = METRICS.map((m) => ({
+  key: m.key,
+  label: m.navLabel ?? m.label,
+  id: `metric-${m.key}`,
+}));
 
 export default function OverviewStats() {
   const today = toYmd(new Date());
@@ -84,7 +82,10 @@ export default function OverviewStats() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-2xl border border-zinc-700 bg-zinc-900/90 p-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div
+        id="overview-filters"
+        className="scroll-mt-28 flex flex-col gap-4 rounded-2xl border border-zinc-700 bg-zinc-900/90 p-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between"
+      >
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-zinc-500">Date range</p>
           <p className="mt-1 text-xs text-zinc-400">{rangeLabel} <span className="text-zinc-600">(UTC)</span></p>
@@ -156,7 +157,8 @@ export default function OverviewStats() {
       )}
 
       <div
-        className="gap-3"
+        id="overview-metrics"
+        className="scroll-mt-28 gap-3"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
@@ -167,7 +169,8 @@ export default function OverviewStats() {
           return (
             <div
               key={m.key}
-              className="relative overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-4 shadow-sm"
+              id={`metric-${m.key}`}
+              className="relative scroll-mt-28 overflow-hidden rounded-xl border border-zinc-700 bg-zinc-900/95 px-4 py-4 shadow-sm"
               style={{ borderLeftWidth: 3, borderLeftColor: m.accent }}
             >
               <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500">{m.label}</p>

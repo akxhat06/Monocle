@@ -1,16 +1,90 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Tailwind v4: explicit content paths (legacy @tailwind + postcss missed many utilities). */
+@source "./**/*.{js,ts,jsx,tsx,mdx}";
+@source "../components/**/*.{js,ts,jsx,tsx,mdx}";
+@source "../lib/**/*.{js,ts,jsx,tsx,mdx}";
 
 :root {
   color-scheme: dark;
+  /* Aligned with app/auth/login (OpeningAnimation / form-side palette) */
+  --oa-bg-top: #0f1218;
+  --oa-bg-mid: #09090b;
+  --oa-bg-bot: #050506;
+  --oa-surface: rgba(24, 24, 27, 0.98);
+  --oa-surface-deep: rgba(9, 9, 11, 0.99);
+  --oa-border-green: rgba(74, 222, 128, 0.28);
+  --oa-border-zinc: rgba(63, 63, 70, 0.85);
+  --oa-text: #fafafa;
+  --oa-muted: rgba(161, 161, 170, 0.9);
+  --neon: #4ade80;
+  --neon-mid: #22c55e;
 }
 
 body {
-  background-color: #09090b;
+  background-color: var(--oa-bg-mid);
   color: #f4f4f5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Full-app shell (signed-in) — same radial backdrop as login */
+.monocle-app-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: radial-gradient(120% 100% at 50% 0%, var(--oa-bg-top) 0%, var(--oa-bg-mid) 45%, var(--oa-bg-bot) 100%);
+}
+
+.monocle-app-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 18%, rgba(74, 222, 128, 0.12) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 88% 72%, rgba(34, 197, 94, 0.06) 0%, transparent 45%),
+    radial-gradient(ellipse 50% 40% at 10% 58%, rgba(52, 211, 153, 0.05) 0%, transparent 40%);
+}
+
+.monocle-app-root > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Glass panels — dark charcoal (avoid light/white read); green edge only */
+.monocle-glass-card {
+  background: linear-gradient(165deg, rgba(14, 14, 16, 0.94) 0%, rgba(7, 7, 9, 0.97) 100%);
+  border: 1px solid rgba(74, 222, 128, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 0 20px rgba(74, 222, 128, 0.03),
+    0 10px 32px -18px rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(10px);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .monocle-glass-card {
+    background: #0c0c0e;
+  }
+}
+
+.monocle-glass-filter {
+  background: linear-gradient(168deg, rgba(30, 30, 34, 0.88) 0%, rgba(14, 14, 16, 0.94) 100%);
+  border: 1px solid var(--oa-border-green);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 12px 40px -20px rgba(0, 0, 0, 0.5),
+    0 0 48px -28px rgba(74, 222, 128, 0.05);
+  backdrop-filter: blur(14px);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .monocle-glass-filter {
+    background: rgba(24, 24, 27, 0.96);
+  }
 }
 
 /* MonocleMarkAnimated — one lens, many views */

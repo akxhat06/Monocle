@@ -46,17 +46,12 @@ export async function GET(request: Request) {
   const toTs = toDayEndIso(to);
 
   const countInRange = async (
-    table:
-      | "questions"
-      | "errors"
-      | "asr_logs"
-      | "tts_logs"
-      | "tool_calls",
+    table: "questions" | "errors" | "asr_logs" | "tts_logs" | "tool_calls",
     column: "created_at" = "created_at",
   ) => {
     const { count, error } = await supabase
       .from(table)
-      .select("*", { count: "exact", head: true })
+      .select("id", { count: "exact", head: true })
       .gte(column, fromTs)
       .lte(column, toTs);
     if (error) throw new Error(`${table}: ${error.message}`);
@@ -65,42 +60,70 @@ export async function GET(request: Request) {
 
   try {
     const [
-      usersRes,
-      sessionsRes,
-      questions,
-      errors,
-      asrLogs,
-      ttsLogs,
-      toolCalls,
+      usersTotalRes,
+      usersActiveRes,
+      sessionsTotalRes,
+      sessionsInRangeRes,
+      questionsTotalRes,
+      questionsInRange,
+      errorsTotalRes,
+      errorsInRange,
+      asrTotalRes,
+      asrInRange,
+      ttsTotalRes,
+      ttsInRange,
+      toolTotalRes,
+      toolInRange,
     ] = await Promise.all([
+      supabase.from("users").select("id", { count: "exact", head: true }),
       supabase
         .from("users")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .gte("last_seen", fromTs)
         .lte("last_seen", toTs),
+      supabase.from("sessions").select("session_id", { count: "exact", head: true }),
       supabase
         .from("sessions")
-        .select("*", { count: "exact", head: true })
+        .select("session_id", { count: "exact", head: true })
         .gte("start_time", fromTs)
         .lte("start_time", toTs),
+      supabase.from("questions").select("id", { count: "exact", head: true }),
       countInRange("questions"),
+      supabase.from("errors").select("id", { count: "exact", head: true }),
       countInRange("errors"),
+      supabase.from("asr_logs").select("id", { count: "exact", head: true }),
       countInRange("asr_logs"),
+      supabase.from("tts_logs").select("id", { count: "exact", head: true }),
       countInRange("tts_logs"),
+      supabase.from("tool_calls").select("id", { count: "exact", head: true }),
       countInRange("tool_calls"),
     ]);
 
-    if (usersRes.error) throw new Error(`users: ${usersRes.error.message}`);
-    if (sessionsRes.error) throw new Error(`sessions: ${sessionsRes.error.message}`);
+    if (usersTotalRes.error) throw new Error(`users: ${usersTotalRes.error.message}`);
+    if (usersActiveRes.error) throw new Error(`users (active): ${usersActiveRes.error.message}`);
+    if (sessionsTotalRes.error) throw new Error(`sessions (total): ${sessionsTotalRes.error.message}`);
+    if (sessionsInRangeRes.error) throw new Error(`sessions: ${sessionsInRangeRes.error.message}`);
+    if (questionsTotalRes.error) throw new Error(`questions (total): ${questionsTotalRes.error.message}`);
+    if (errorsTotalRes.error) throw new Error(`errors (total): ${errorsTotalRes.error.message}`);
+    if (asrTotalRes.error) throw new Error(`asr_logs (total): ${asrTotalRes.error.message}`);
+    if (ttsTotalRes.error) throw new Error(`tts_logs (total): ${ttsTotalRes.error.message}`);
+    if (toolTotalRes.error) throw new Error(`tool_calls (total): ${toolTotalRes.error.message}`);
 
     const counts: OverviewCounts = {
-      users: usersRes.count ?? 0,
-      sessions: sessionsRes.count ?? 0,
-      questions,
-      errors,
-      asrLogs,
-      ttsLogs,
-      toolCalls,
+      users: usersTotalRes.count ?? 0,
+      usersActiveInRange: usersActiveRes.count ?? 0,
+      sessions: sessionsTotalRes.count ?? 0,
+      sessionsInRange: sessionsInRangeRes.count ?? 0,
+      questions: questionsTotalRes.count ?? 0,
+      questionsInRange,
+      errors: errorsTotalRes.count ?? 0,
+      errorsInRange,
+      asrLogs: asrTotalRes.count ?? 0,
+      asrLogsInRange: asrInRange,
+      ttsLogs: ttsTotalRes.count ?? 0,
+      ttsLogsInRange: ttsInRange,
+      toolCalls: toolTotalRes.count ?? 0,
+      toolCallsInRange: toolInRange,
     };
 
     return NextResponse.json({ from, to, counts });
