@@ -37,7 +37,7 @@ export default function AppPage() {
             labels={{
               title: PRODUCT_NAME,
               initial:
-                "One lens, many views — ask anything about your data and I’ll shape the dashboard to match.",
+                "Ask about your data in plain language—I’ll shape the dashboard to fit that answer, not a generic template.",
               placeholder:
                 "e.g. Show me a sales overview for last month…",
             }}

@@ -11,6 +11,12 @@ export const PRODUCT_TAGLINE_LOWER = "one lens, many views";
 /** Single line for titles, metadata, and headers. */
 export const PRODUCT_LINE = `${PRODUCT_NAME} — ${PRODUCT_TAGLINE}` as const;
 
+/**
+ * Human explanation under the headline (auth, marketing). Not the short tagline—this is what the product *does*.
+ */
+export const PRODUCT_VALUE_PROP =
+  "Every question deserves its own layout. Ask in plain language—Monocle assembles the metrics and charts to answer it.";
+
 /** Short description for meta tags and assistants. */
 export const PRODUCT_DESCRIPTION =
-  "Ask in natural language. One lens, many views — analytics dashboards that reshape to every question.";
+  "Conversational analytics: plain-language questions, dashboards composed per answer—one lens on your data.";

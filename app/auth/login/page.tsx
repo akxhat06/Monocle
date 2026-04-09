@@ -4,8 +4,24 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import MonocleMarkAnimated from "@/components/brand/MonocleMarkAnimated";
-import { PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
+import { PRODUCT_NAME, PRODUCT_TAGLINE, PRODUCT_VALUE_PROP } from "@/lib/brand";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+
+const AI_DEMO_STEPS = [
+  { text: "Show me spending over the last 30 days", view: "ts" as const },
+  { text: "How many payments did we process this month?", view: "count" as const },
+  { text: "Which categories drove the most spend last quarter?", view: "breakdown" as const },
+];
+
+const REV_MONTH_LABELS = ["J", "F", "M", "A", "M", "J", "J", "A", "S"] as const;
+
+const REV_BAR_SCENES = [
+  { pcts: [38, 44, 41, 55, 48, 62, 58, 52, 92], hotIndex: 8, badge: "+12%", foot: "$1,048" },
+  { pcts: [52, 46, 58, 49, 63, 55, 47, 61, 74], hotIndex: 4, badge: "+8%", foot: "$988" },
+  { pcts: [45, 53, 44, 59, 52, 68, 56, 49, 81], hotIndex: 5, badge: "+14%", foot: "$1,132" },
+  { pcts: [41, 48, 55, 51, 46, 54, 64, 57, 69], hotIndex: 8, badge: "+6%", foot: "$903" },
+  { pcts: [48, 42, 50, 57, 44, 51, 59, 66, 77], hotIndex: 7, badge: "+11%", foot: "$1,015" },
+] as const;
 
 const fontSans = DM_Sans({
   subsets: ["latin"],
@@ -59,6 +75,95 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  const [aiDemoInput, setAiDemoInput] = useState("");
+  const [aiDemoFocus, setAiDemoFocus] = useState(false);
+  const [aiDemoSending, setAiDemoSending] = useState(false);
+  const [aiDemoThinking, setAiDemoThinking] = useState(false);
+  const [aiDemoView, setAiDemoView] = useState<null | "ts" | "count" | "breakdown">(null);
+  const [aiDemoNonce, setAiDemoNonce] = useState(0);
+  const [revSceneIndex, setRevSceneIndex] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const id = window.setInterval(() => {
+      setRevSceneIndex((i) => (i + 1) % REV_BAR_SCENES.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const reduced =
+      typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      setAiDemoView("ts");
+      return;
+    }
+
+    let cancelled = false;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => {
+        const id = setTimeout(() => resolve(), ms);
+        timers.push(id);
+      });
+
+    const typeText = async (text: string) => {
+      for (let i = 0; i < text.length; i++) {
+        if (cancelled) return;
+        setAiDemoInput(text.slice(0, i + 1));
+        await sleep(36 + (i % 4) * 5);
+      }
+    };
+
+    (async () => {
+      await sleep(900);
+      while (!cancelled) {
+        for (const step of AI_DEMO_STEPS) {
+          if (cancelled) return;
+          setAiDemoView(null);
+          setAiDemoInput("");
+          setAiDemoFocus(false);
+          setAiDemoThinking(false);
+          setAiDemoSending(false);
+          await sleep(520);
+          if (cancelled) return;
+
+          setAiDemoFocus(true);
+          await sleep(300);
+          if (cancelled) return;
+          await typeText(step.text);
+          if (cancelled) return;
+          await sleep(400);
+          if (cancelled) return;
+
+          setAiDemoSending(true);
+          setAiDemoThinking(true);
+          await sleep(160);
+          if (cancelled) return;
+          setAiDemoInput("");
+          setAiDemoFocus(false);
+          await sleep(480);
+          if (cancelled) return;
+
+          setAiDemoNonce((n) => n + 1);
+          setAiDemoView(step.view);
+          setAiDemoThinking(false);
+          setAiDemoSending(false);
+
+          await sleep(2600);
+          if (cancelled) return;
+        }
+        await sleep(700);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      timers.forEach(clearTimeout);
+    };
+  }, []);
+
   function showToast(msg: string) {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
@@ -92,23 +197,14 @@ export default function LoginPage() {
     setTimeout(() => router.push("/"), 1000);
   }
 
-  function flipTo(target: "login" | "signup") {
+  function switchMode(target: "login" | "signup") {
     setError(null);
     setMode(target);
   }
 
   const revenueRange = ["Weekly", "Monthly", "Yearly", "Range"] as const;
-  const revenueBars = [
-    { label: "J", pct: 38, highlight: false },
-    { label: "F", pct: 44, highlight: false },
-    { label: "M", pct: 41, highlight: false },
-    { label: "A", pct: 55, highlight: false },
-    { label: "M", pct: 48, highlight: false },
-    { label: "J", pct: 62, highlight: false },
-    { label: "J", pct: 58, highlight: false },
-    { label: "A", pct: 52, highlight: false },
-    { label: "S", pct: 92, highlight: true, badge: "+12%", foot: "$1,048" },
-  ];
+  const revScene = REV_BAR_SCENES[revSceneIndex];
+
   const calendarWeeks = [
     [null, null, 1, 2, 3, 4, 5],
     [6, 7, 8, 9, 10, 11, 12],
@@ -124,16 +220,6 @@ export default function LoginPage() {
     { id: "e", label: "Internet & Tel.", pct: 14, color: "#fb923c" },
     { id: "f", label: "Other", pct: 19, color: "#64748b" },
   ] as const;
-  const spendConic = spendMix.reduce(
-    (acc, s) => {
-      const start = acc.a;
-      const end = acc.a + s.pct;
-      acc.parts.push(`${s.color} ${start}% ${end}%`);
-      acc.a = end;
-      return acc;
-    },
-    { a: 0, parts: [] as string[] },
-  ).parts.join(", ");
   const invoices = [
     { when: "Aug 9 · in 1 week", name: "Leonard Kim", amount: "$130.00", status: "unpaid" as const },
     { when: "Aug 12 · Paid", name: "Studio North", amount: "$2,400.00", status: "paid" as const },
@@ -190,21 +276,23 @@ export default function LoginPage() {
                   <span>0</span>
                 </div>
                 <div className="rev-bars">
-                  {revenueBars.map((b, i) => (
-                    <div key={i} className="rev-bar-col">
-                      <div className="rev-bar-stack">
-                        {b.highlight && b.badge && (
-                          <span className="rev-bar-badge">{b.badge}</span>
-                        )}
-                        <div
-                          className={`rev-bar${b.highlight ? " rev-bar-hot" : " rev-bar-muted"}`}
-                          style={{ height: `${b.pct}%`, animationDelay: `${i * 40}ms` }}
-                        />
+                  {REV_MONTH_LABELS.map((label, i) => {
+                    const pct = revScene.pcts[i] ?? 40;
+                    const hot = i === revScene.hotIndex;
+                    return (
+                      <div key={`${label}-${i}`} className="rev-bar-col">
+                        <div className="rev-bar-stack">
+                          {hot ? <span className="rev-bar-badge">{revScene.badge}</span> : null}
+                          <div
+                            className={`rev-bar${hot ? " rev-bar-hot" : " rev-bar-muted"}`}
+                            style={{ height: `${pct}%` }}
+                          />
+                        </div>
+                        {hot && revScene.foot ? <span className="rev-bar-foot">{revScene.foot}</span> : null}
+                        <span className="rev-bar-mo">{label}</span>
                       </div>
-                      {b.foot && <span className="rev-bar-foot">{b.foot}</span>}
-                      <span className="rev-bar-mo">{b.label}</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -252,9 +340,14 @@ export default function LoginPage() {
               <div className="ai-head">
                 <svg className="ai-sparkle" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path
-                    d="M12 2l1.2 4.2L17.4 7.5l-4.2 1.2L12 12.9l-1.2-4.2L6.6 7.5l4.2-1.2L12 2zM19 14l.6 2.1 2.1.6-2.1.6L19 19.3l-.6-2.1-2.1-.6 2.1-.6L19 14z"
+                    className="ai-sparkle-star ai-sparkle-star--lg"
+                    d="M12 2l1.2 4.2L17.4 7.5l-4.2 1.2L12 12.9l-1.2-4.2L6.6 7.5l4.2-1.2L12 2z"
                     fill="currentColor"
-                    opacity="0.9"
+                  />
+                  <path
+                    className="ai-sparkle-star ai-sparkle-star--sm"
+                    d="M19 14l.6 2.1 2.1.6-2.1.6L19 19.3l-.6-2.1-2.1-.6 2.1-.6L19 14z"
+                    fill="currentColor"
                   />
                 </svg>
                 <span>How can I help you?</span>
@@ -263,25 +356,125 @@ export default function LoginPage() {
                 <strong>AI summary:</strong> Spend is steady week over week. Ask {PRODUCT_NAME} to drill into any category or
                 compare periods — same natural language you&apos;ll use after sign-in.
               </p>
-              <div className="ai-mini-row">
-                <div className="ai-mini">
-                  <span className="ai-mini-label">Spending trends</span>
-                  <div className="ai-mini-val">
-                    <span className="ai-mini-num">7</span>
-                    <span className="ai-badge ai-badge-warn">Stable</span>
+              <div className="ai-results" aria-hidden>
+                {aiDemoThinking && (
+                  <div className="ai-thinking">
+                    <span className="ai-thinking-dot" />
+                    <span className="ai-thinking-dot" />
+                    <span className="ai-thinking-dot" />
+                    <span className="ai-thinking-label">Building view</span>
                   </div>
-                </div>
-                <div className="ai-mini">
-                  <span className="ai-mini-label">Customer payments</span>
-                  <div className="ai-mini-val">
-                    <span className="ai-mini-num">25</span>
-                    <span className="ai-badge ai-badge-ok">Processed</span>
+                )}
+                {aiDemoView === "ts" && (
+                  <div key={`ts-${aiDemoNonce}`} className="agui-card agui-card-ts">
+                    <div className="agui-card-head">
+                      <span className="agui-card-title">Spending · last 30 days</span>
+                      <span className="agui-pill">Time series</span>
+                    </div>
+                    <div className="agui-ts-chart">
+                      <div className="agui-ts-y" aria-hidden>
+                        <span>80k</span>
+                        <span>40k</span>
+                        <span>0</span>
+                      </div>
+                      <div className="agui-ts-bars">
+                        {[38, 52, 45, 61, 55, 48, 72, 58, 66, 54, 49, 78].map((pct, i) => (
+                          <div key={i} className="agui-ts-col">
+                            <div className="agui-ts-bar-wrap">
+                              <div className="agui-ts-bar" style={{ height: `${pct}%` }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <p className={`agui-card-foot ${fontMono.className}`}>+6.2% vs prior 30d · peak mid-period</p>
                   </div>
-                </div>
+                )}
+                {aiDemoView === "count" && (
+                  <div key={`count-${aiDemoNonce}`} className="agui-card agui-card-count">
+                    <div className="agui-card-head">
+                      <span className="agui-card-title">Payments · this month</span>
+                      <span className="agui-pill agui-pill-alt">Count</span>
+                    </div>
+                    <div className="agui-kpi">
+                      <span className="agui-kpi-num">247</span>
+                      <span className="agui-kpi-sub">processed</span>
+                    </div>
+                    <ul className="agui-count-rows">
+                      <li>
+                        <span>Settled</span>
+                        <span className={fontMono.className}>198</span>
+                      </li>
+                      <li>
+                        <span>Pending</span>
+                        <span className={fontMono.className}>31</span>
+                      </li>
+                      <li>
+                        <span>Failed</span>
+                        <span className={fontMono.className}>18</span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
+                {aiDemoView === "breakdown" && (
+                  <div key={`bd-${aiDemoNonce}`} className="agui-card agui-card-breakdown">
+                    <div className="agui-card-head">
+                      <span className="agui-card-title">Spend by category · last quarter</span>
+                      <span className="agui-pill agui-pill-amber">Breakdown</span>
+                    </div>
+                    <ul className="agui-hbar-list">
+                      {[
+                        { label: "Software", pct: 82, color: "#4ade80" },
+                        { label: "Travel", pct: 58, color: "#38bdf8" },
+                        { label: "Payroll", pct: 44, color: "#a78bfa" },
+                        { label: "Other", pct: 26, color: "#64748b" },
+                      ].map((row, rowIndex) => (
+                        <li key={row.label} className="agui-hbar-row">
+                          <span className="agui-hbar-label">{row.label}</span>
+                          <div className="agui-hbar-track">
+                            <div
+                              className="agui-hbar-fill"
+                              style={{
+                                width: `${row.pct}%`,
+                                background: row.color,
+                                animationDelay: `${0.07 * rowIndex}s`,
+                              }}
+                            />
+                          </div>
+                          <span className={`agui-hbar-pct ${fontMono.className}`}>{row.pct}%</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className={`agui-card-foot ${fontMono.className}`}>Software +4 pts vs prior quarter</p>
+                  </div>
+                )}
               </div>
-              <div className="ai-prompt">
-                <span className="ai-prompt-ph">Ask me anything…</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <div
+                className={`ai-prompt${aiDemoFocus ? " ai-prompt--focus" : ""}${aiDemoSending ? " ai-prompt--send" : ""}`}
+                aria-hidden
+              >
+                <div className="ai-prompt-text">
+                  {aiDemoInput ? (
+                    <>
+                      {aiDemoInput}
+                      {aiDemoFocus && <span className="ai-caret" />}
+                    </>
+                  ) : aiDemoFocus ? (
+                    <span className="ai-caret" />
+                  ) : (
+                    <span className="ai-prompt-ph">Ask me anything…</span>
+                  )}
+                </div>
+                <svg
+                  className="ai-prompt-send"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  aria-hidden
+                >
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </div>
@@ -289,27 +482,28 @@ export default function LoginPage() {
 
             <div className="glass-card glass-spend">
               <div className="spend-head">Spending</div>
-              <div className="spend-body">
-                <div className="spend-donut-wrap">
-                  <div
-                    className="spend-donut-ring"
-                    style={{ background: `conic-gradient(${spendConic})` }}
-                  />
-                  <div className="spend-donut-hole">
-                    <span className="spend-donut-total">$28,165</span>
-                    <span className="spend-donut-sub">Total</span>
-                  </div>
-                </div>
-                <ul className="spend-legend">
-                  {spendMix.map((s) => (
-                    <li key={s.id}>
-                      <span className="spend-dot" style={{ background: s.color }} />
-                      <span className="spend-lab">{s.label}</span>
-                      <span className="spend-pct">{s.pct}%</span>
+              <ul className="spend-count-stack">
+                {spendMix.map((s) => {
+                  const count = Math.max(8, Math.round(s.pct * 11.5));
+                  return (
+                    <li
+                      key={s.id}
+                      className="spend-count-card"
+                      style={{
+                        borderLeftColor: s.color,
+                        background: `linear-gradient(90deg, ${s.color}18 0%, rgba(0, 0, 0, 0.22) 55%)`,
+                        boxShadow: `inset 0 0 0 1px ${s.color}14`,
+                      }}
+                    >
+                      <div className="spend-count-card-text">
+                        <span className="spend-count-label">{s.label}</span>
+                        <span className="spend-count-pct">{s.pct}% share</span>
+                      </div>
+                      <span className={`spend-count-num ${fontMono.className}`}>{count}</span>
                     </li>
-                  ))}
-                </ul>
-              </div>
+                  );
+                })}
+              </ul>
             </div>
 
             <div className="glass-card glass-invoice">
@@ -348,16 +542,19 @@ export default function LoginPage() {
       </section>
 
       {/* ===== RIGHT: Animated Forms ===== */}
-      <section className="form-side">
+      <section className={`form-side${isLogin ? "" : " form-side--signup"}`}>
         <div className="form-side-bg" aria-hidden />
         <div className="form-side-vignette" aria-hidden />
-        <header className="form-mobile-brand">
-          <MonocleMarkAnimated size={36} title="Monocle" />
-          <div className="form-mobile-brand-text">
-            <span className="form-mobile-name">{PRODUCT_NAME}</span>
-            <span className="form-mobile-tag">{PRODUCT_TAGLINE}</span>
+        <div className="mobile-hero">
+          <div className="mobile-hero-backdrop" aria-hidden />
+          <div className="mobile-hero-logo-wrap">
+            <MonocleMarkAnimated size={88} title="Monocle" />
           </div>
-        </header>
+          <div className="mobile-hero-titles">
+            <span className="mobile-hero-name">{PRODUCT_NAME}</span>
+            <span className="mobile-hero-tag">{PRODUCT_TAGLINE}</span>
+          </div>
+        </div>
         <div className="form-scroll">
 
           {/* ---- Sign In ---- */}
@@ -365,10 +562,8 @@ export default function LoginPage() {
             <div className="form-panel">
               <div className="form-inner">
               <div className="badge"><span className="badge-dot" />{PRODUCT_TAGLINE}</div>
-              <h1>Sign in to<br /><span className="accent">{PRODUCT_NAME}</span></h1>
-              <p className={`subtitle ${fontMono.className}`}>
-                {PRODUCT_TAGLINE} — ask in natural language; analytics dashboards reshape to every query.
-              </p>
+              <h1>Welcome back<br /><span className="accent">{PRODUCT_NAME}</span></h1>
+              <p className={`subtitle ${fontMono.className}`}>{PRODUCT_VALUE_PROP}</p>
 
               <form onSubmit={onLogin} className="form form--login">
                 <div className="field">
@@ -420,7 +615,7 @@ export default function LoginPage() {
 
               <p className="switch-text">
                 Don&apos;t have an account?{" "}
-                <button type="button" className="switch-link" onClick={() => flipTo("signup")}>Create one free →</button>
+                <button type="button" className="switch-link" onClick={() => switchMode("signup")}>Create one free →</button>
               </p>
               </div>
             </div>
@@ -433,7 +628,7 @@ export default function LoginPage() {
               <div className="badge"><span className="badge-dot" />{PRODUCT_NAME}</div>
               <h1>Create your<br /><span className="accent">Account</span></h1>
               <p className={`subtitle ${fontMono.className}`}>
-                {PRODUCT_TAGLINE}. Join and start asking your data anything.
+                {PRODUCT_VALUE_PROP} Create your account to try it on your own data.
               </p>
 
               <form onSubmit={onSignup} className="form form--signup">
@@ -507,7 +702,7 @@ export default function LoginPage() {
 
               <p className="switch-text">
                 Already have an account?{" "}
-                <button type="button" className="switch-link" onClick={() => flipTo("login")}>Sign in →</button>
+                <button type="button" className="switch-link" onClick={() => switchMode("login")}>Sign in →</button>
               </p>
               </div>
             </div>
@@ -630,7 +825,7 @@ export default function LoginPage() {
           position: fixed;
           inset: 0;
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
           overflow: hidden;
           color-scheme: dark;
         }
@@ -725,8 +920,22 @@ export default function LoginPage() {
 
         .glass-revenue { grid-column: 1 / 3; grid-row: 1; }
         .glass-cal { grid-column: 3; grid-row: 1; }
-        .glass-ai { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 8px; }
-        .glass-spend { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 6px; }
+        .glass-ai {
+          grid-column: 1;
+          grid-row: 2;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          min-height: 0;
+        }
+        .glass-spend {
+          grid-column: 2;
+          grid-row: 2;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          min-height: 0;
+        }
         .glass-invoice { grid-column: 3; grid-row: 2; display: flex; flex-direction: column; gap: 8px; }
 
         .rev-head {
@@ -863,9 +1072,9 @@ export default function LoginPage() {
           width: 100%;
           border-radius: 6px 6px 2px 2px;
           min-height: 4px;
-          transform-origin: bottom center;
-          transform: scaleY(0);
-          animation: rev-bar-in 0.75s cubic-bezier(0.34, 1.2, 0.64, 1) backwards;
+          flex-shrink: 0;
+          align-self: stretch;
+          transition: height 0.75s cubic-bezier(0.34, 1.15, 0.64, 1), filter 0.35s ease, box-shadow 0.35s ease;
         }
 
         .rev-bar-muted {
@@ -895,10 +1104,6 @@ export default function LoginPage() {
           font-size: 9px;
           font-weight: 600;
           color: #6b7280;
-        }
-
-        @keyframes rev-bar-in {
-          to { transform: scaleY(1); }
         }
 
         .cal-head {
@@ -1000,10 +1205,51 @@ export default function LoginPage() {
           color: #f1f5f9;
         }
 
+        @keyframes ai-sparkle-float {
+          0%,
+          100% {
+            transform: translateY(0) rotate(0deg);
+          }
+          33% {
+            transform: translateY(-1.5px) rotate(-2deg);
+          }
+          66% {
+            transform: translateY(0.5px) rotate(2deg);
+          }
+        }
+
+        @keyframes ai-sparkle-twinkle {
+          0%,
+          100% {
+            opacity: 0.42;
+            transform: scale(0.86);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
         .ai-sparkle {
           color: #86efac;
           flex-shrink: 0;
+          overflow: visible;
           filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.45));
+          animation: ai-sparkle-float 4.5s ease-in-out infinite;
+        }
+
+        .ai-sparkle-star {
+          transform-box: fill-box;
+          transform-origin: center;
+        }
+
+        .ai-sparkle-star--lg {
+          animation: ai-sparkle-twinkle 2.6s ease-in-out infinite;
+        }
+
+        .ai-sparkle-star--sm {
+          animation: ai-sparkle-twinkle 2.6s ease-in-out infinite;
+          animation-delay: -1.3s;
         }
 
         .ai-summary {
@@ -1011,85 +1257,446 @@ export default function LoginPage() {
           font-size: 10px;
           line-height: 1.5;
           color: #9ca3af;
+          flex: 0 0 auto;
+        }
+
+        .ai-results {
+          flex: 1 1 auto;
+          min-height: 72px;
+          max-height: 200px;
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          overflow-x: hidden;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(74, 222, 128, 0.25) transparent;
+        }
+
+        .ai-results::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .ai-results::-webkit-scrollbar-thumb {
+          background: rgba(74, 222, 128, 0.28);
+          border-radius: 4px;
+        }
+
+        .ai-thinking {
+          display: flex;
+          align-items: center;
+          gap: 5px;
+          padding: 8px 10px;
+          border-radius: 10px;
+          background: rgba(0, 0, 0, 0.28);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ai-thinking-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
+          background: #86efac;
+          animation: ai-dot-pulse 0.9s ease-in-out infinite;
+        }
+
+        .ai-thinking-dot:nth-child(2) {
+          animation-delay: 0.15s;
+        }
+
+        .ai-thinking-dot:nth-child(3) {
+          animation-delay: 0.3s;
+        }
+
+        .ai-thinking-label {
+          margin-left: 4px;
+          font-size: 10px;
+          font-weight: 600;
+          color: #94a3b8;
+        }
+
+        @keyframes ai-dot-pulse {
+          0%,
+          100% {
+            opacity: 0.35;
+            transform: scale(0.85);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes agui-card-in {
+          from {
+            opacity: 0;
+            transform: translateY(5px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes agui-bar-in {
+          from {
+            transform: scaleY(0);
+          }
+          to {
+            transform: scaleY(1);
+          }
+        }
+
+        .agui-card {
+          border-radius: 10px;
+          padding: 8px 9px;
+          background: rgba(0, 0, 0, 0.32);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          animation: agui-card-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+          flex-shrink: 0;
+        }
+
+        .agui-card-ts {
+          flex: 0 0 auto;
+        }
+
+        .agui-card-count {
+          flex: 0 0 auto;
+          animation-delay: 0.05s;
+        }
+
+        .agui-card-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 6px;
+          margin-bottom: 6px;
+        }
+
+        .agui-card-title {
+          font-size: 9px;
+          font-weight: 700;
+          color: #e2e8f0;
+          letter-spacing: 0.02em;
+        }
+
+        .agui-pill {
+          font-size: 8px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          padding: 2px 6px;
+          border-radius: 999px;
+          color: #052e16;
+          background: linear-gradient(135deg, #bbf7d0, var(--neon));
+          flex-shrink: 0;
+        }
+
+        .agui-pill-alt {
+          background: rgba(56, 189, 248, 0.25);
+          color: #7dd3fc;
+          border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+
+        .agui-pill-amber {
+          background: rgba(251, 191, 36, 0.2);
+          color: #fcd34d;
+          border: 1px solid rgba(251, 191, 36, 0.35);
+        }
+
+        .agui-card-breakdown {
+          flex: 0 0 auto;
+        }
+
+        .agui-hbar-list {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .agui-hbar-row {
+          display: grid;
+          grid-template-columns: 52px 1fr 28px;
+          align-items: center;
+          gap: 6px;
+          font-size: 8px;
+          font-weight: 600;
+        }
+
+        .agui-hbar-label {
+          color: #94a3b8;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .agui-hbar-track {
+          height: 6px;
+          border-radius: 4px;
+          background: rgba(0, 0, 0, 0.35);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          overflow: hidden;
+        }
+
+        .agui-hbar-fill {
+          height: 100%;
+          border-radius: 3px;
+          transform-origin: left center;
+          transform: scaleX(0);
+          animation: agui-hbar-grow 0.62s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+          box-shadow: 0 0 6px rgba(0, 0, 0, 0.35);
+        }
+
+        .agui-hbar-pct {
+          text-align: right;
+          color: #cbd5e1;
+          font-size: 8px;
+          font-weight: 700;
+        }
+
+        @keyframes agui-hbar-grow {
+          to {
+            transform: scaleX(1);
+          }
+        }
+
+        .agui-ts-chart {
+          display: flex;
+          gap: 4px;
+          align-items: stretch;
+          height: 56px;
+        }
+
+        .agui-ts-y {
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          font-size: 7px;
+          font-weight: 600;
+          color: #5c6577;
+          width: 22px;
+          flex-shrink: 0;
+          text-align: right;
+          padding-bottom: 2px;
+        }
+
+        .agui-ts-bars {
           flex: 1;
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 2px;
+          min-width: 0;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+          padding-bottom: 1px;
+        }
+
+        .agui-ts-col {
+          flex: 1;
+          min-width: 0;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+        }
+
+        .agui-ts-bar-wrap {
+          flex: 1;
+          display: flex;
+          align-items: flex-end;
+          justify-content: center;
           min-height: 0;
+        }
+
+        .agui-ts-bar {
+          width: 100%;
+          max-width: 7px;
+          border-radius: 3px 3px 1px 1px;
+          background: linear-gradient(180deg, var(--neon) 0%, var(--neon-dark) 100%);
+          box-shadow: 0 0 8px rgba(74, 222, 128, 0.25);
+          transform-origin: bottom center;
+          animation: agui-bar-in 0.55s cubic-bezier(0.34, 1.15, 0.64, 1) backwards;
+        }
+
+        .agui-ts-col:nth-child(1) .agui-ts-bar {
+          animation-delay: 0.04s;
+        }
+        .agui-ts-col:nth-child(2) .agui-ts-bar {
+          animation-delay: 0.07s;
+        }
+        .agui-ts-col:nth-child(3) .agui-ts-bar {
+          animation-delay: 0.1s;
+        }
+        .agui-ts-col:nth-child(4) .agui-ts-bar {
+          animation-delay: 0.13s;
+        }
+        .agui-ts-col:nth-child(5) .agui-ts-bar {
+          animation-delay: 0.16s;
+        }
+        .agui-ts-col:nth-child(6) .agui-ts-bar {
+          animation-delay: 0.19s;
+        }
+        .agui-ts-col:nth-child(7) .agui-ts-bar {
+          animation-delay: 0.22s;
+        }
+        .agui-ts-col:nth-child(8) .agui-ts-bar {
+          animation-delay: 0.25s;
+        }
+        .agui-ts-col:nth-child(9) .agui-ts-bar {
+          animation-delay: 0.28s;
+        }
+        .agui-ts-col:nth-child(10) .agui-ts-bar {
+          animation-delay: 0.31s;
+        }
+        .agui-ts-col:nth-child(11) .agui-ts-bar {
+          animation-delay: 0.34s;
+        }
+        .agui-ts-col:nth-child(12) .agui-ts-bar {
+          animation-delay: 0.37s;
+        }
+
+        .agui-card-foot {
+          margin: 5px 0 0;
+          font-size: 8px;
+          line-height: 1.35;
+          color: #6b7280;
+        }
+
+        .agui-kpi {
+          display: flex;
+          align-items: baseline;
+          gap: 8px;
+          margin-bottom: 6px;
+        }
+
+        .agui-kpi-num {
+          font-size: 22px;
+          font-weight: 800;
+          color: #f8fafc;
+          font-variant-numeric: tabular-nums;
+          letter-spacing: -0.03em;
+          line-height: 1;
+        }
+
+        .agui-kpi-sub {
+          font-size: 9px;
+          font-weight: 600;
+          color: #64748b;
+        }
+
+        .agui-count-rows {
+          list-style: none;
+          margin: 0;
+          padding: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .agui-count-rows li {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          font-size: 9px;
+          font-weight: 600;
+          color: #94a3b8;
+          padding: 4px 6px;
+          border-radius: 6px;
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .agui-count-rows li span:last-child {
+          color: #e2e8f0;
+          font-weight: 700;
         }
 
         .ai-summary strong {
           color: #cbd5e1;
         }
 
-        .ai-mini-row {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .ai-mini {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 8px;
-          padding: 8px 10px;
-          border-radius: 12px;
-          background: rgba(0, 0, 0, 0.22);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .ai-mini-label {
-          font-size: 10px;
-          font-weight: 600;
-          color: #8b95a8;
-        }
-
-        .ai-mini-val {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .ai-mini-num {
-          font-size: 16px;
-          font-weight: 800;
-          color: #fff;
-        }
-
-        .ai-badge {
-          font-size: 9px;
-          font-weight: 700;
-          padding: 3px 8px;
-          border-radius: 999px;
-        }
-
-        .ai-badge-warn {
-          color: #fff7ed;
-          background: rgba(251, 146, 60, 0.35);
-          border: 1px solid rgba(251, 146, 60, 0.45);
-        }
-
-        .ai-badge-ok {
-          color: #052e16;
-          background: rgba(74, 222, 128, 0.85);
-        }
-
         .ai-prompt {
           display: flex;
           align-items: center;
           justify-content: space-between;
+          gap: 8px;
           padding: 10px 12px;
           border-radius: 12px;
           background: rgba(0, 0, 0, 0.28);
           border: 1px solid rgba(255, 255, 255, 0.06);
           color: #5c6577;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+          flex-shrink: 0;
+          margin-top: auto;
+        }
+
+        .ai-prompt--focus {
+          border-color: rgba(74, 222, 128, 0.35);
+          box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.12);
+          background: rgba(0, 0, 0, 0.38);
+        }
+
+        .ai-prompt--send .ai-prompt-send {
+          color: #4ade80;
+          opacity: 1;
+          animation: ai-send-pulse 0.45s ease;
+        }
+
+        @keyframes ai-send-pulse {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          40% {
+            transform: scale(1.12);
+          }
+        }
+
+        .ai-prompt-text {
+          flex: 1;
+          min-width: 0;
+          font-size: 11px;
+          line-height: 1.35;
+          color: #cbd5e1;
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 0;
         }
 
         .ai-prompt-ph {
           font-size: 11px;
         }
 
-        .ai-prompt svg {
+        .ai-caret {
+          display: inline-block;
+          width: 2px;
+          height: 12px;
+          margin-left: 1px;
+          background: #4ade80;
+          border-radius: 1px;
+          animation: ai-caret-blink 1s step-end infinite;
+          vertical-align: middle;
+        }
+
+        @keyframes ai-caret-blink {
+          0%,
+          100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0;
+          }
+        }
+
+        .ai-prompt-send {
           flex-shrink: 0;
           opacity: 0.5;
+          transition: color 0.2s ease, opacity 0.2s ease;
         }
 
         .spend-head {
@@ -1100,102 +1707,71 @@ export default function LoginPage() {
           letter-spacing: 0.06em;
         }
 
-        .spend-body {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex: 1;
-          min-height: 0;
-        }
-
-        .spend-donut-wrap {
-          position: relative;
-          width: 72px;
-          height: 72px;
-          flex-shrink: 0;
-        }
-
-        .spend-donut-ring {
-          position: absolute;
-          inset: 0;
-          border-radius: 50%;
-          box-shadow: 0 0 20px -6px rgba(255, 255, 255, 0.15);
-        }
-
-        .spend-donut-hole {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          width: 44px;
-          height: 44px;
-          border-radius: 50%;
-          background: linear-gradient(180deg, rgba(12, 18, 14, 0.55) 0%, rgba(9, 9, 11, 0.92) 100%);
-          box-shadow: inset 0 0 0 1px rgba(74, 222, 128, 0.1), inset 0 2px 8px rgba(0, 0, 0, 0.45);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          z-index: 1;
-        }
-
-        .spend-donut-total {
-          font-size: 9px;
-          font-weight: 800;
-          color: #f8fafc;
-          font-variant-numeric: tabular-nums;
-          line-height: 1.1;
-        }
-
-        .spend-donut-sub {
-          font-size: 7px;
-          font-weight: 600;
-          color: #6b7280;
-          text-transform: uppercase;
-          letter-spacing: 0.04em;
-        }
-
-        .spend-legend {
+        .spend-count-stack {
           list-style: none;
           margin: 0;
           padding: 0;
           display: flex;
           flex-direction: column;
-          gap: 3px;
+          gap: 5px;
           flex: 1;
-          min-width: 0;
-          overflow: hidden;
+          min-height: 0;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
         }
 
-        .spend-legend li {
+        .spend-count-stack::-webkit-scrollbar {
+          width: 3px;
+        }
+
+        .spend-count-stack::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.15);
+          border-radius: 3px;
+        }
+
+        .spend-count-card {
           display: flex;
           align-items: center;
-          gap: 5px;
-          font-size: 9px;
-          color: #b8c0d0;
-        }
-
-        .spend-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
+          justify-content: space-between;
+          gap: 8px;
+          padding: 6px 8px 6px 9px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-left: 3px solid;
           flex-shrink: 0;
         }
 
-        .spend-lab {
-          flex: 1;
+        .spend-count-card-text {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
           min-width: 0;
+        }
+
+        .spend-count-label {
+          font-size: 9px;
+          font-weight: 600;
+          color: #e2e8f0;
+          line-height: 1.2;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
-          font-weight: 500;
         }
 
-        .spend-pct {
+        .spend-count-pct {
+          font-size: 8px;
+          font-weight: 500;
+          color: #64748b;
+        }
+
+        .spend-count-num {
+          font-size: 15px;
+          font-weight: 800;
+          color: #f8fafc;
           font-variant-numeric: tabular-nums;
-          font-weight: 700;
-          color: #f1f5f9;
+          line-height: 1;
+          flex-shrink: 0;
         }
 
         .inv-head {
@@ -1331,11 +1907,43 @@ export default function LoginPage() {
 
         @media (prefers-reduced-motion: reduce) {
           .rev-bar {
-            transform: scaleY(1) !important;
-            animation: none !important;
+            transition: none !important;
           }
           .dash-side::after {
             animation: none;
+          }
+          .ai-thinking-dot {
+            animation: none !important;
+            opacity: 0.85;
+          }
+          .agui-card {
+            animation: none !important;
+          }
+          .agui-ts-bar {
+            animation: none !important;
+            transform: scaleY(1) !important;
+          }
+          .agui-hbar-fill {
+            animation: none !important;
+            transform: scaleX(1) !important;
+          }
+          .ai-caret {
+            animation: none !important;
+            opacity: 1;
+          }
+          .ai-prompt--send .ai-prompt-send {
+            animation: none !important;
+          }
+          .ai-sparkle,
+          .ai-sparkle-star {
+            animation: none !important;
+          }
+          .ai-sparkle {
+            transform: none !important;
+          }
+          .ai-sparkle-star {
+            opacity: 0.92;
+            transform: none !important;
           }
         }
 
@@ -1343,6 +1951,7 @@ export default function LoginPage() {
         .form-side {
           position: relative;
           overflow: hidden;
+          min-width: 0;
           background: radial-gradient(120% 100% at 50% 0%, var(--oa-bg-top) 0%, var(--oa-bg-mid) 45%, var(--oa-bg-bot) 100%);
         }
 
@@ -1377,42 +1986,9 @@ export default function LoginPage() {
           z-index: 0;
         }
 
-        .form-mobile-brand {
+        /* Mobile-only hero (top); hidden on desktop — shown in @media max-width 900px */
+        .mobile-hero {
           display: none;
-          position: relative;
-          z-index: 2;
-          align-items: center;
-          gap: 12px;
-          padding: max(12px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
-          flex-shrink: 0;
-        }
-
-        .form-mobile-brand .monocle-mark-svg {
-          filter: drop-shadow(0 0 10px rgba(74, 222, 128, 0.35));
-        }
-
-        .form-mobile-brand-text {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          min-width: 0;
-        }
-
-        .form-mobile-name {
-          font-size: 19px;
-          font-weight: 800;
-          font-style: italic;
-          color: var(--oa-text);
-          letter-spacing: -0.02em;
-          line-height: 1.1;
-          text-shadow: 0 0 28px rgba(74, 222, 128, 0.12);
-        }
-
-        .form-mobile-tag {
-          font-size: 10px;
-          font-weight: 500;
-          color: var(--oa-muted);
-          letter-spacing: 0.06em;
         }
 
         .form-scroll {
@@ -1423,7 +1999,7 @@ export default function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: clamp(20px, 4vw, 40px);
+          padding: clamp(14px, 2.5vw, 28px);
           box-sizing: border-box;
           position: relative;
           z-index: 1;
@@ -1435,16 +2011,16 @@ export default function LoginPage() {
           width: calc(100% - 48px);
           max-width: 480px;
           opacity: 0;
-          transform: rotateY(88deg) scale(0.96);
+          transform: translate3d(0, 12px, 0) scale(0.99);
           transform-origin: center center;
-          transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+          transition: opacity 0.32s ease, transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
           pointer-events: none;
           -webkit-tap-highlight-color: transparent;
         }
 
         .panel.visible {
           opacity: 1;
-          transform: rotateY(0deg) scale(1);
+          transform: translate3d(0, 0, 0) scale(1);
           pointer-events: auto;
           position: relative;
           width: 100%;
@@ -1453,31 +2029,36 @@ export default function LoginPage() {
         .form-panel {
           position: relative;
           width: 100%;
-          max-width: 440px;
-          padding: clamp(28px, 4vw, 40px) clamp(22px, 3vw, 32px);
-          border-radius: 16px;
-          background: linear-gradient(165deg, var(--oa-surface) 0%, var(--oa-surface-deep) 100%);
-          border: 1px solid var(--oa-border-green);
+          max-width: 420px;
+          min-width: 0;
+          padding: clamp(20px, 2.8vw, 28px) clamp(20px, 2.5vw, 26px);
+          border-radius: 18px;
+          background: linear-gradient(
+            168deg,
+            rgba(30, 30, 34, 0.92) 0%,
+            rgba(12, 12, 14, 0.96) 100%
+          );
+          border: 1px solid rgba(255, 255, 255, 0.07);
           box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.06),
-            0 0 0 1px rgba(0, 0, 0, 0.4),
-            0 0 32px rgba(74, 222, 128, 0.06),
-            0 32px 64px -20px rgba(0, 0, 0, 0.55),
-            0 0 40px rgba(74, 222, 128, 0.08);
-          backdrop-filter: blur(12px);
+            inset 0 1px 0 rgba(255, 255, 255, 0.05),
+            0 0 0 1px rgba(0, 0, 0, 0.5),
+            0 20px 50px -20px rgba(0, 0, 0, 0.7),
+            0 0 80px -36px rgba(74, 222, 128, 0.07);
+          backdrop-filter: blur(14px);
         }
 
         .form-panel::before {
           content: "";
           position: absolute;
           top: 0;
-          left: 24px;
-          right: 24px;
+          left: 18px;
+          right: 18px;
           height: 1px;
           background: linear-gradient(
             90deg,
             transparent,
-            rgba(74, 222, 128, 0.35) 50%,
+            rgba(255, 255, 255, 0.09) 45%,
+            rgba(255, 255, 255, 0.04) 55%,
             transparent
           );
           border-radius: 1px;
@@ -1491,30 +2072,32 @@ export default function LoginPage() {
         }
 
         /* ===== SHARED FORM STYLES ===== */
-        .form-inner { width: 100%; }
+        .form-inner {
+          width: 100%;
+          min-width: 0;
+        }
 
         .badge {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
-          padding: 7px 18px;
+          gap: 7px;
+          padding: 5px 14px;
           border-radius: 999px;
-          border: 1px solid rgba(74, 222, 128, 0.35);
-          background: rgba(74, 222, 128, 0.06);
-          font-size: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.09);
+          background: rgba(255, 255, 255, 0.03);
+          font-size: 11px;
           font-weight: 600;
-          letter-spacing: 0.04em;
-          color: #86efac;
-          margin-bottom: 22px;
-          box-shadow: 0 0 20px -8px rgba(74, 222, 128, 0.35);
+          letter-spacing: 0.06em;
+          color: rgba(161, 161, 170, 0.95);
+          margin-bottom: 14px;
         }
 
         .badge-dot {
-          width: 7px;
-          height: 7px;
+          width: 6px;
+          height: 6px;
           border-radius: 50%;
           background: #4ade80;
-          box-shadow: 0 0 10px rgba(74, 222, 128, 0.85);
+          box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
           animation: badge-pulse 2s ease-in-out infinite;
         }
 
@@ -1528,11 +2111,18 @@ export default function LoginPage() {
           .form-side-bg::after {
             animation: none;
           }
+          .panel {
+            transition: opacity 0.15s ease !important;
+            transform: none !important;
+          }
+          .panel.visible {
+            transform: none !important;
+          }
         }
 
         h1 {
-          margin: 0 0 8px;
-          font-size: clamp(26px, 3.2vw, 38px);
+          margin: 0 0 5px;
+          font-size: clamp(24px, 2.85vw, 34px);
           font-weight: 800;
           color: var(--oa-text);
           line-height: 1.12;
@@ -1542,16 +2132,30 @@ export default function LoginPage() {
         .accent { color: #4ade80; font-style: italic; }
 
         .subtitle {
-          margin: 0 0 28px;
+          margin: 0 0 16px;
           font-size: 13px;
           color: var(--oa-muted);
-          line-height: 1.65;
-          max-width: 42ch;
+          line-height: 1.5;
+          max-width: 44ch;
         }
 
-        .form { display: flex; flex-direction: column; gap: 16px; }
+        .form {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          min-width: 0;
+        }
 
-        .field { display: flex; flex-direction: column; gap: 6px; }
+        .form--signup {
+          gap: 11px;
+        }
+
+        .field {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          min-width: 0;
+        }
 
         .field label {
           font-size: 11px;
@@ -1561,17 +2165,22 @@ export default function LoginPage() {
           text-transform: uppercase;
         }
 
-        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .row2 {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          gap: 11px;
+          min-width: 0;
+        }
 
         .input-box {
           display: flex;
           align-items: center;
-          height: 52px;
-          border-radius: 12px;
+          height: 48px;
+          border-radius: 11px;
           border: 1px solid var(--oa-border-zinc);
           background: rgba(24, 24, 27, 0.85);
-          padding: 0 16px;
-          gap: 12px;
+          padding: 0 14px;
+          gap: 10px;
           transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
           width: 100%;
           box-sizing: border-box;
@@ -1616,7 +2225,7 @@ export default function LoginPage() {
           border: none;
           background: transparent;
           color: var(--oa-text);
-          font-size: 15px;
+          font-size: 14px;
           outline: none;
         }
 
@@ -1644,7 +2253,13 @@ export default function LoginPage() {
 
         .eye:hover { opacity: 1; background: rgba(74, 222, 128, 0.08); }
 
-        .form-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .form-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          margin-top: 1px;
+        }
 
         .cb-label {
           display: flex;
@@ -1691,21 +2306,21 @@ export default function LoginPage() {
         }
 
         .btn-primary {
-          height: 52px;
+          height: 48px;
           border: none;
-          border-radius: 14px;
+          border-radius: 12px;
           background: var(--neon);
           color: var(--oa-bg-bot);
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 800;
           letter-spacing: 0.03em;
           cursor: pointer;
-          margin-top: 4px;
+          margin-top: 2px;
           box-shadow:
             0 1px 0 rgba(255, 255, 255, 0.35) inset,
             0 0 0 1px rgba(255, 255, 255, 0.06) inset,
-            0 6px 24px -4px rgba(74, 222, 128, 0.55),
-            0 0 32px -8px rgba(74, 222, 128, 0.4);
+            0 3px 12px -4px rgba(74, 222, 128, 0.28),
+            0 0 16px -10px rgba(74, 222, 128, 0.18);
           transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s, filter 0.2s;
         }
 
@@ -1715,8 +2330,8 @@ export default function LoginPage() {
           box-shadow:
             0 1px 0 rgba(255, 255, 255, 0.4) inset,
             0 0 0 1px rgba(255, 255, 255, 0.08) inset,
-            0 12px 36px -6px rgba(74, 222, 128, 0.65),
-            0 0 40px -6px rgba(74, 222, 128, 0.5);
+            0 5px 18px -6px rgba(74, 222, 128, 0.36),
+            0 0 22px -10px rgba(74, 222, 128, 0.24);
         }
 
         .btn-primary:active:not(:disabled) {
@@ -1736,26 +2351,6 @@ export default function LoginPage() {
           }
         }
 
-        @keyframes mobile-card-glow {
-          0%,
-          100% {
-            box-shadow:
-              inset 0 1px 0 rgba(255, 255, 255, 0.06),
-              0 0 0 1px rgba(0, 0, 0, 0.4),
-              0 0 28px rgba(74, 222, 128, 0.05),
-              0 24px 48px -20px rgba(0, 0, 0, 0.5),
-              0 0 36px rgba(74, 222, 128, 0.06);
-          }
-          50% {
-            box-shadow:
-              inset 0 1px 0 rgba(255, 255, 255, 0.07),
-              0 0 0 1px rgba(0, 0, 0, 0.4),
-              0 0 40px rgba(74, 222, 128, 0.1),
-              0 28px 52px -18px rgba(0, 0, 0, 0.52),
-              0 0 52px rgba(74, 222, 128, 0.12);
-          }
-        }
-
         @keyframes mobile-ambient-shift {
           0%,
           100% {
@@ -1767,7 +2362,7 @@ export default function LoginPage() {
         }
 
         .switch-text {
-          margin-top: 22px;
+          margin-top: 14px;
           text-align: center;
           font-size: 13px;
           color: rgba(161, 161, 170, 0.65);
@@ -1811,71 +2406,195 @@ export default function LoginPage() {
             overflow: hidden;
           }
 
-          /* Softer entrance than 3D flip — better on phones */
-          .panel {
-            width: 100%;
-            max-width: 100%;
-            transform: translate3d(0, 18px, 0);
-            opacity: 0;
-            z-index: 0;
-            box-sizing: border-box;
-          }
-          .panel.visible {
-            transform: translate3d(0, 0, 0);
-            opacity: 1;
-            z-index: 2;
-            transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1), transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
-          }
-
-          .form-mobile-brand {
+          /* Top: calm hero — logo + wordmark only */
+          .mobile-hero {
             display: flex;
-            flex-shrink: 0;
-            padding: max(8px, env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) 4px max(12px, env(safe-area-inset-left, 0px));
+            position: relative;
+            z-index: 2;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1 1 0;
+            min-height: 0;
+            max-height: 38vh;
+            padding: max(12px, env(safe-area-inset-top, 0px)) 24px 16px;
+            gap: 16px;
             animation: mobile-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
           }
 
-          .form-mobile-brand .monocle-mark-svg {
-            width: 32px !important;
-            height: 32px !important;
+          .mobile-hero-backdrop {
+            position: absolute;
+            left: 50%;
+            top: 44%;
+            transform: translate(-50%, -50%);
+            width: min(240px, 70vw);
+            height: min(240px, 70vw);
+            border-radius: 50%;
+            background: radial-gradient(
+              circle at 50% 45%,
+              rgba(74, 222, 128, 0.12) 0%,
+              rgba(74, 222, 128, 0.03) 42%,
+              transparent 68%
+            );
+            pointer-events: none;
           }
 
-          .form-mobile-name {
-            font-size: 17px;
+          .mobile-hero-logo-wrap {
+            position: relative;
+            z-index: 1;
           }
 
+          .mobile-hero-logo-wrap .monocle-mark-svg {
+            width: 88px !important;
+            height: 88px !important;
+            filter: drop-shadow(0 8px 32px rgba(74, 222, 128, 0.2));
+          }
+
+          .mobile-hero-titles {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            max-width: 280px;
+          }
+
+          .mobile-hero-name {
+            font-size: 26px;
+            font-weight: 700;
+            font-style: normal;
+            color: var(--oa-text);
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+          }
+
+          .mobile-hero-tag {
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(161, 161, 170, 0.92);
+            letter-spacing: 0.02em;
+            line-height: 1.35;
+          }
+
+          /* Bottom: form sheet */
           .form-scroll {
             position: relative;
-            flex: 1 1 auto;
+            flex: 1 1 0;
             min-height: 0;
-            max-height: 100%;
             overflow: hidden;
             align-items: stretch;
-            justify-content: center;
+            justify-content: flex-end;
             padding:
-              4px
-              max(12px, env(safe-area-inset-right, 0px))
-              max(8px, env(safe-area-inset-bottom, 0px))
-              max(12px, env(safe-area-inset-left, 0px));
+              0
+              max(16px, env(safe-area-inset-right, 0px))
+              max(16px, env(safe-area-inset-bottom, 0px))
+              max(16px, env(safe-area-inset-left, 0px));
+          }
+
+          .form-inner > .badge {
+            display: none;
+          }
+
+          /* Signup: taller form — shrink hero & lift sheet so primary button stays on-screen */
+          .form-side--signup .mobile-hero {
+            max-height: 24vh;
+            padding-top: max(8px, env(safe-area-inset-top, 0px));
+            padding-bottom: 6px;
+            gap: 8px;
+          }
+
+          .form-side--signup .mobile-hero-backdrop {
+            width: min(180px, 58vw);
+            height: min(180px, 58vw);
+          }
+
+          .form-side--signup .mobile-hero-logo-wrap .monocle-mark-svg {
+            width: 68px !important;
+            height: 68px !important;
+          }
+
+          .form-side--signup .mobile-hero-name {
+            font-size: 21px;
+          }
+
+          .form-side--signup .mobile-hero-tag {
+            font-size: 11px;
+          }
+
+          .form-side--signup .form-scroll {
+            justify-content: flex-start;
+            padding-top: 2px;
+          }
+
+          .form-side--signup .form-panel {
+            padding: 16px 16px 18px;
+          }
+
+          .form-side--signup h1 {
+            font-size: 19px;
+            margin-bottom: 5px;
+          }
+
+          .form-side--signup .subtitle {
+            margin-bottom: 8px;
+            font-size: 12px;
+            -webkit-line-clamp: 2;
+          }
+
+          .form-side--signup .form--signup {
+            gap: 7px;
+          }
+
+          .form-side--signup .field {
+            gap: 3px;
+          }
+
+          .form-side--signup .switch-text {
+            margin-top: 6px;
+          }
+
+          /* Crossfade + slight lift — matches desktop, no 3D flip */
+          .panel {
+            width: 100%;
+            max-width: 100%;
+            transform: translate3d(0, 10px, 0) scale(0.99);
+            opacity: 0;
+            z-index: 0;
+            box-sizing: border-box;
+            transition: opacity 0.32s ease, transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+          }
+          .panel.visible {
+            transform: translate3d(0, 0, 0) scale(1);
+            opacity: 1;
+            z-index: 2;
           }
 
           .form-panel {
             box-sizing: border-box;
             width: 100%;
             max-width: 100%;
-            padding: 14px 14px 16px;
-            border-radius: 16px;
-            animation: mobile-card-glow 5s ease-in-out infinite;
+            padding: 20px 18px 22px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: linear-gradient(165deg, rgba(28, 28, 31, 0.94) 0%, rgba(12, 12, 14, 0.97) 100%);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow:
+              inset 0 1px 0 rgba(255, 255, 255, 0.05),
+              0 0 0 1px rgba(0, 0, 0, 0.45),
+              0 20px 50px -24px rgba(0, 0, 0, 0.68),
+              0 0 60px -28px rgba(74, 222, 128, 0.06);
+            animation: none;
           }
 
           .form-side-bg::after {
             animation: login-grid-drift 22s linear infinite, mobile-ambient-shift 6s ease-in-out infinite;
           }
 
-          .form-inner .badge {
-            animation: mobile-fade-up 0.5s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both;
-          }
           .form-inner h1 {
-            animation: mobile-fade-up 0.52s 0.12s cubic-bezier(0.22, 1, 0.36, 1) both;
+            animation: mobile-fade-up 0.52s 0.08s cubic-bezier(0.22, 1, 0.36, 1) both;
           }
           .form-inner .subtitle {
             animation: mobile-fade-up 0.52s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -1888,20 +2607,25 @@ export default function LoginPage() {
           }
 
           .subtitle {
-            margin-bottom: 12px;
-            font-size: 12px;
-            line-height: 1.4;
+            margin-bottom: 14px;
+            font-size: 13px;
+            line-height: 1.45;
             max-width: none;
             display: -webkit-box;
             -webkit-box-orient: vertical;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 2;
             overflow: hidden;
           }
 
           h1 {
-            font-size: clamp(22px, 6.2vw, 28px);
-            margin-bottom: 6px;
-            line-height: 1.1;
+            font-size: 21px;
+            margin-bottom: 8px;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+          }
+
+          h1 .accent {
+            font-style: normal;
           }
 
           .badge {
@@ -2002,8 +2726,7 @@ export default function LoginPage() {
             animation: none !important;
             opacity: 0.35;
           }
-          .form-mobile-brand,
-          .form-inner .badge,
+          .mobile-hero,
           .form-inner h1,
           .form-inner .subtitle,
           .form-inner .form,
@@ -2025,13 +2748,27 @@ export default function LoginPage() {
         }
 
         @media (max-width: 900px) and (max-height: 720px) {
-          .form-mobile-brand {
-            padding-top: max(4px, env(safe-area-inset-top, 0px));
-            padding-bottom: 2px;
+          .mobile-hero {
+            max-height: 32vh;
+            padding: max(6px, env(safe-area-inset-top, 0px)) 16px 8px;
+            gap: 10px;
+          }
+          .mobile-hero-backdrop {
+            width: min(200px, 65vw);
+            height: min(200px, 65vw);
+          }
+          .mobile-hero-logo-wrap .monocle-mark-svg {
+            width: 72px !important;
+            height: 72px !important;
+          }
+          .mobile-hero-name {
+            font-size: 22px;
+          }
+          .mobile-hero-tag {
+            font-size: 11px;
           }
           .form-scroll {
-            padding-top: 2px;
-            padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
+            padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
           }
           .form-panel {
             padding: 10px 12px 12px;
@@ -2068,6 +2805,18 @@ export default function LoginPage() {
           }
           .switch-text {
             margin-top: 6px;
+          }
+
+          .form-side--signup .mobile-hero {
+            max-height: 20vh;
+            gap: 6px;
+          }
+          .form-side--signup .mobile-hero-logo-wrap .monocle-mark-svg {
+            width: 58px !important;
+            height: 58px !important;
+          }
+          .form-side--signup .form--signup {
+            gap: 5px;
           }
         }
       `}</style>
