@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { OVERVIEW_METRIC_NAV } from "@/components/app/OverviewStats";
+import { useLogout } from "@/lib/auth/useLogout";
 import { PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
 
 const TONE_KEY = "monocle-sidebar-tone";
@@ -42,6 +43,7 @@ function Icon({
 
 export default function AppSidebar() {
   const hash = useHash();
+  const { pending, logout, toast } = useLogout();
   const [workspaceOpen, setWorkspaceOpen] = useState(true);
   const [tone, setTone] = useState<SidebarTone>("default");
 
@@ -80,9 +82,11 @@ export default function AppSidebar() {
     OVERVIEW_METRIC_NAV.some((m) => m.id === hash);
 
   return (
-    <aside
-      className={`flex min-h-0 w-64 shrink-0 flex-col self-stretch overflow-hidden border-r border-emerald-500/15 ${toneClass[tone]}`}
-    >
+    <>
+      {toast}
+      <aside
+        className={`flex min-h-0 w-64 shrink-0 flex-col self-stretch overflow-hidden border-r border-emerald-500/15 ${toneClass[tone]}`}
+      >
       <div className="shrink-0 border-b border-zinc-800/90 px-4 py-4">
         <div className="flex items-center justify-between gap-2">
           <p className="truncate text-sm font-bold tracking-tight text-zinc-50">{PRODUCT_NAME}</p>
@@ -229,19 +233,27 @@ export default function AppSidebar() {
             </Icon>
           </button>
         </div>
-        <form action="/auth/signout" method="post">
-          <button
-            type="submit"
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-red-500/40 hover:bg-red-950/25 hover:text-red-200"
-          >
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => void logout()}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700 bg-zinc-900 py-2.5 text-sm font-semibold text-zinc-200 transition hover:border-red-500/40 hover:bg-red-950/25 hover:text-red-200 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? (
+            <span
+              className="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-zinc-600 border-t-red-400"
+              aria-hidden
+            />
+          ) : (
             <Icon className="h-4 w-4 text-zinc-500">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M18 9l3 3m0 0l-3 3m3-3H9" />
             </Icon>
-            Log out
-          </button>
-        </form>
+          )}
+          {pending ? "Signing out…" : "Log out"}
+        </button>
       </div>
     </aside>
+    </>
   );
 }
 

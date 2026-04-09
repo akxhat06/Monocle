@@ -205,14 +205,14 @@ export default function CrmDashboard() {
           aria-expanded={composerMounted && composerEntered}
         >
           <div
-            className={`-mb-[4.25rem] transition duration-300 ease-out ${
+            className={`relative z-20 -mb-[4.25rem] transition duration-300 ease-out ${
               tipVisible
-                ? "translate-y-0 scale-100 opacity-100"
-                : "pointer-events-none translate-y-1.5 scale-95 opacity-0"
+                ? "translate-x-3 -translate-y-8 scale-100 opacity-100"
+                : "pointer-events-none translate-x-3 -translate-y-5 scale-95 opacity-0"
             }`}
             aria-hidden={!tipVisible}
           >
-            <div className="relative z-10 w-max max-w-[calc(100vw-2rem)]">
+            <div className="relative w-max max-w-[calc(100vw-2rem)]">
               <div className="rounded-xl border border-emerald-500/30 bg-zinc-950/95 px-2.5 py-1.5 shadow-lg shadow-black/50 ring-1 ring-white/[0.06] backdrop-blur-md">
                 <p className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight text-zinc-100">
                   <span className="text-emerald-300">Hey!!</span>{" "}
