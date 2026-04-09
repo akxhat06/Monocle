@@ -1,4 +1,5 @@
 import "./globals.css";
+import "@copilotkit/react-ui/styles.css";
 import type { Metadata } from "next";
 import OpeningAnimationHost from "@/components/OpeningAnimationHost";
 import { PRODUCT_DESCRIPTION, PRODUCT_LINE } from "@/lib/brand";

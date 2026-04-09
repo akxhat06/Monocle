@@ -7,9 +7,13 @@ import { PRODUCT_NAME, PRODUCT_TAGLINE } from "@/lib/brand";
 const BAR_H = [38, 62, 48, 78, 55, 88, 64, 42, 71, 52];
 
 /** viewBox 0 0 420 100 */
-const CHART_TOP =
+const SERIES_PRIMARY =
   "M0 72 Q42 66 84 58 T168 44 T252 32 T336 22 T420 14";
-const CHART_AREA = `${CHART_TOP} V100 H0 Z`;
+const SERIES_SECONDARY =
+  "M0 78 Q60 73 120 68 T240 58 T360 50 T420 45";
+const SERIES_TERTIARY =
+  "M0 84 Q56 79 112 74 T224 66 T336 60 T420 55";
+const CHART_AREA = `${SERIES_PRIMARY} V100 H0 Z`;
 
 const PARTICLES = [
   { left: "6%", top: "18%", d: "0s" },
@@ -195,7 +199,7 @@ export default function OpeningAnimation() {
                   <path className="oa-area-fill" d={CHART_AREA} fill="url(#oaSplashArea)" />
                   <path
                     className="oa-chart-line"
-                    d={CHART_TOP}
+                    d={SERIES_PRIMARY}
                     fill="none"
                     stroke="#4ade80"
                     strokeWidth="2.25"
@@ -204,12 +208,23 @@ export default function OpeningAnimation() {
                   />
                   <path
                     className="oa-chart-line-soft"
-                    d="M0 78 Q60 72 120 68 T240 58 T360 50 T420 46"
+                    d={SERIES_SECONDARY}
                     fill="none"
-                    stroke="#4ade80"
-                    strokeWidth="1.5"
-                    strokeDasharray="5 4"
-                    opacity="0.45"
+                    stroke="#38bdf8"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.85"
+                  />
+                  <path
+                    className="oa-chart-line-soft"
+                    d={SERIES_TERTIARY}
+                    fill="none"
+                    stroke="#a78bfa"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.75"
                   />
                   {!exiting && (
                     <g filter="url(#oaGlow)">
@@ -218,7 +233,7 @@ export default function OpeningAnimation() {
                           dur="2.4s"
                           repeatCount="indefinite"
                           rotate="auto"
-                          path={CHART_TOP}
+                          path={SERIES_PRIMARY}
                         />
                       </circle>
                       <circle r="2.5" fill="#f0fdf4" className="oa-chart-dot-hot">
@@ -226,7 +241,7 @@ export default function OpeningAnimation() {
                           dur="2.4s"
                           repeatCount="indefinite"
                           rotate="auto"
-                          path={CHART_TOP}
+                          path={SERIES_PRIMARY}
                         />
                       </circle>
                     </g>

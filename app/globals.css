@@ -1002,3 +1002,63 @@ body {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* CopilotKit panel theme overrides to match Monocle dark UI */
+.monocle-copilot-chat {
+  color: #e4e4e7;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.monocle-copilot-chat * {
+  scrollbar-color: rgba(74, 222, 128, 0.45) rgba(24, 24, 27, 0.75);
+}
+
+.monocle-copilot-chat > * {
+  min-height: 0;
+}
+
+.monocle-copilot-chat :is(main, section, article, aside) {
+  background: transparent !important;
+  color: #e4e4e7 !important;
+}
+
+.monocle-copilot-chat :is(div, p, span, label, h1, h2, h3, h4, small) {
+  color: inherit;
+}
+
+.monocle-copilot-chat > div:last-child {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.monocle-copilot-chat > div:last-child > div {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.monocle-copilot-chat :is(textarea, input) {
+  background: rgba(10, 10, 12, 0.95) !important;
+  border: 1px solid rgba(74, 222, 128, 0.2) !important;
+  border-radius: 18px !important;
+  color: #f4f4f5 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.monocle-copilot-chat :is(button) {
+  color: #d4d4d8;
+}
+
+.monocle-copilot-chat :is(hr) {
+  border-color: rgba(74, 222, 128, 0.18) !important;
+}
+
+.monocle-copilot-chat a[href*="copilotkit"],
+.monocle-copilot-chat :is([class*="powered"], [class*="Powered"]) {
+  display: none !important;
+}

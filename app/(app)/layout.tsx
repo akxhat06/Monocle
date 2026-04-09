@@ -1,3 +1,5 @@
+import CopilotClientProvider from "@/components/copilot/CopilotClientProvider";
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return <CopilotClientProvider>{children}</CopilotClientProvider>;
 }
