@@ -5,7 +5,12 @@ import { PRODUCT_DESCRIPTION, PRODUCT_LINE } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: PRODUCT_LINE,
-  description: PRODUCT_DESCRIPTION
+  description: PRODUCT_DESCRIPTION,
+  icons: {
+    icon: [{ url: "/monocle-mark-animated.svg", type: "image/svg+xml" }],
+    shortcut: "/monocle-mark-animated.svg",
+    apple: "/monocle-mark-animated.svg",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
