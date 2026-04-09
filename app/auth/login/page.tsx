@@ -175,9 +175,15 @@ export default function LoginPage() {
     setLoading(true);
     const supabase = createBrowserSupabaseClient();
     const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-    if (err) { setError(err.message); setLoading(false); return; }
-    showToast("Welcome back! Signing you in...");
-    setTimeout(() => router.push("/"), 1000);
+    if (err) {
+      setError(err.message);
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    showToast("Welcome back!");
+    router.replace("/");
+    router.refresh();
   }
 
   async function onSignup(e: React.FormEvent<HTMLFormElement>) {
@@ -192,9 +198,15 @@ export default function LoginPage() {
       password: signupPassword,
       options: { data: { full_name: signupName } },
     });
-    if (err) { setError(err.message); setLoading(false); return; }
-    showToast("Account created! Taking you in...");
-    setTimeout(() => router.push("/"), 1000);
+    if (err) {
+      setError(err.message);
+      setLoading(false);
+      return;
+    }
+    setLoading(false);
+    showToast("Account created! Taking you in…");
+    router.replace("/");
+    router.refresh();
   }
 
   function switchMode(target: "login" | "signup") {
@@ -601,14 +613,19 @@ export default function LoginPage() {
 
                 {error && isLogin && <p className="err">{error}</p>}
 
-                <button className="btn-primary" type="submit" disabled={loading}>
-                  {loading ? (
+                <button
+                  className="btn-primary"
+                  type="submit"
+                  disabled={loading}
+                  aria-busy={loading && isLogin}
+                >
+                  {loading && isLogin ? (
                     <span className="btn-loading">
-                      <span className="btn-spinner" />
-                      {mode === "login" ? "Signing in..." : "Creating account..."}
+                      <span className="btn-spinner" aria-hidden />
+                      Signing in…
                     </span>
                   ) : (
-                    mode === "login" ? "Sign In →" : "Create Account →"
+                    "Sign In →"
                   )}
                 </button>
               </form>
@@ -688,14 +705,19 @@ export default function LoginPage() {
 
                 {error && !isLogin && <p className="err">{error}</p>}
 
-                <button className="btn-primary" type="submit" disabled={loading}>
-                  {loading ? (
+                <button
+                  className="btn-primary"
+                  type="submit"
+                  disabled={loading}
+                  aria-busy={loading && !isLogin}
+                >
+                  {loading && !isLogin ? (
                     <span className="btn-loading">
-                      <span className="btn-spinner" />
-                      {mode === "login" ? "Signing in..." : "Creating account..."}
+                      <span className="btn-spinner" aria-hidden />
+                      Creating account…
                     </span>
                   ) : (
-                    mode === "login" ? "Sign In →" : "Create Account →"
+                    "Create Account →"
                   )}
                 </button>
               </form>
@@ -711,14 +733,6 @@ export default function LoginPage() {
         </div>
       </section>
 
-
-      {/* Fullscreen loader overlay */}
-      {loading && (
-        <div className="loader-overlay">
-          <div className="loader-spinner" />
-          <p className="loader-text">{mode === "login" ? "Signing in..." : "Creating account..."}</p>
-        </div>
-      )}
 
       <style jsx>{`
         .toast {
@@ -771,35 +785,10 @@ export default function LoginPage() {
           }
         }
 
-        .loader-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 9999;
-          background: radial-gradient(120% 100% at 50% 0%, var(--oa-bg-top) 0%, var(--oa-bg-mid) 45%, var(--oa-bg-bot) 100%);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 20px;
-        }
-
-        .loader-spinner {
-          width: 44px;
-          height: 44px;
-          border: 3px solid rgba(63, 63, 70, 0.75);
-          border-top-color: var(--neon);
-          border-radius: 50%;
-          animation: spin 0.7s linear infinite;
-        }
-
-        .loader-text {
-          color: rgba(161, 161, 170, 0.75);
-          font-size: 14px;
-          font-weight: 500;
-        }
-
         @keyframes spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
 
         .login-shell {
@@ -2338,7 +2327,34 @@ export default function LoginPage() {
           transform: translateY(1px) scale(0.99);
         }
 
-        .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+        .btn-primary:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .btn-primary:disabled[aria-busy="true"] {
+          opacity: 1;
+          cursor: wait;
+        }
+
+        .btn-loading {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        .btn-spinner {
+          width: 18px;
+          height: 18px;
+          box-sizing: border-box;
+          border: 2px solid rgba(5, 46, 22, 0.35);
+          border-top-color: var(--oa-bg-bot);
+          border-radius: 50%;
+          animation: spin 0.65s linear infinite;
+          flex-shrink: 0;
+        }
 
         @keyframes mobile-fade-up {
           from {
