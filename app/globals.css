@@ -222,6 +222,131 @@ body {
   }
 }
 
+/* ─── CopilotKit dark theme override for Monocle ─────────────────────────── */
+
+.monocle-copilot-chat {
+  --copilot-kit-primary-color: #34d399;
+  --copilot-kit-background-color: #09090b;
+  --copilot-kit-contrast-color: #09090b;
+  --copilot-kit-secondary-contrast-color: #f4f4f5;
+  --copilot-kit-muted-color: #71717a;
+  --copilot-kit-separator-color: rgba(74, 222, 128, 0.18);
+  --copilot-kit-scrollbar-color: rgba(63, 63, 70, 0.45);
+  --copilot-kit-response-button-color: #a1a1aa;
+  --copilot-kit-response-button-background-color: rgba(24, 24, 27, 0.85);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Root container */
+.monocle-copilot-chat > div {
+  height: 100%;
+  background: transparent !important;
+}
+
+/* Chat window: fill container, remove default border/shadow */
+.monocle-copilot-chat .copilotkit-window {
+  height: 100% !important;
+  max-height: 100% !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.monocle-copilot-chat .copilotkit-header {
+  background: transparent !important;
+  border-bottom: 1px solid rgba(74, 222, 128, 0.18) !important;
+  padding: 0.65rem 1rem !important;
+  padding-right: 3rem !important; /* space for close button */
+}
+
+.monocle-copilot-chat .copilotkit-header h1,
+.monocle-copilot-chat .copilotkit-header span {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: #a1a1aa !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+/* Messages area */
+.monocle-copilot-chat .copilotkit-messages-container {
+  flex: 1 !important;
+  min-height: 0 !important;
+  background: transparent !important;
+  padding: 0.75rem !important;
+}
+
+/* Individual messages */
+.monocle-copilot-chat .copilotkit-message {
+  max-width: 90% !important;
+}
+
+.monocle-copilot-chat .copilotkit-user-message {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  color: #f4f4f5 !important;
+  border-radius: 1rem !important;
+}
+
+.monocle-copilot-chat .copilotkit-assistant-message {
+  background: rgba(52, 211, 153, 0.07) !important;
+  border: 1px solid rgba(52, 211, 153, 0.18) !important;
+  color: #f4f4f5 !important;
+  border-radius: 1rem !important;
+}
+
+/* Input area */
+.monocle-copilot-chat .copilotkit-input-container,
+.monocle-copilot-chat form[class*="input"] {
+  background: rgba(9, 9, 11, 0.92) !important;
+  border-top: 1px solid rgba(74, 222, 128, 0.18) !important;
+  padding: 0.6rem 0.75rem !important;
+}
+
+.monocle-copilot-chat textarea,
+.monocle-copilot-chat input[type="text"] {
+  background: transparent !important;
+  color: #f4f4f5 !important;
+  caret-color: #34d399 !important;
+}
+
+.monocle-copilot-chat textarea::placeholder,
+.monocle-copilot-chat input[type="text"]::placeholder {
+  color: #52525b !important;
+}
+
+/* Send button */
+.monocle-copilot-chat button[type="submit"],
+.monocle-copilot-chat .copilotkit-send-button {
+  color: #34d399 !important;
+  background: transparent !important;
+}
+
+.monocle-copilot-chat button[type="submit"]:hover,
+.monocle-copilot-chat .copilotkit-send-button:hover {
+  color: #6ee7b7 !important;
+}
+
+/* Stop button */
+.monocle-copilot-chat .copilotkit-stop-button {
+  color: #f87171 !important;
+}
+
+/* Tool call / action render blocks */
+.monocle-copilot-chat .copilotkit-action-render {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── */
+
 .oa-overlay {
   position: fixed;
   inset: 0;
@@ -1003,12 +1128,12 @@ body {
   to { transform: rotate(360deg); }
 }
 
-/* CopilotKit panel theme overrides to match Monocle dark UI */
+/* Minimal, stable dark theme for Copilot panel */
 .monocle-copilot-chat {
   color: #e4e4e7;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  height: 100%;
+  min-height: 100%;
+  background: linear-gradient(165deg, rgba(14, 14, 16, 0.85) 0%, rgba(8, 8, 10, 0.92) 100%);
 }
 
 .monocle-copilot-chat * {
@@ -1016,49 +1141,39 @@ body {
 }
 
 .monocle-copilot-chat > * {
-  min-height: 0;
-}
-
-.monocle-copilot-chat :is(main, section, article, aside) {
-  background: transparent !important;
-  color: #e4e4e7 !important;
-}
-
-.monocle-copilot-chat :is(div, p, span, label, h1, h2, h3, h4, small) {
-  color: inherit;
-}
-
-.monocle-copilot-chat > div:last-child {
-  min-height: 0;
-  flex: 1;
+  min-height: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.monocle-copilot-chat > div:last-child > div {
-  min-height: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.monocle-copilot-chat :is(textarea, input) {
-  background: rgba(10, 10, 12, 0.95) !important;
-  border: 1px solid rgba(74, 222, 128, 0.2) !important;
-  border-radius: 18px !important;
+.monocle-copilot-chat :where(textarea, input) {
+  background: rgba(10, 10, 12, 0.9) !important;
   color: #f4f4f5 !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(74, 222, 128, 0.2) !important;
+  border-radius: 14px !important;
 }
 
-.monocle-copilot-chat :is(button) {
+.monocle-copilot-chat :where(button) {
   color: #d4d4d8;
 }
 
-.monocle-copilot-chat :is(hr) {
-  border-color: rgba(74, 222, 128, 0.18) !important;
+/* Keep message list scrollable + composer fixed at bottom */
+.monocle-copilot-chat :where(main, section, article) {
+  min-height: 0;
 }
 
-.monocle-copilot-chat a[href*="copilotkit"],
-.monocle-copilot-chat :is([class*="powered"], [class*="Powered"]) {
-  display: none !important;
+.monocle-copilot-chat form {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  padding-top: 8px;
+  background: linear-gradient(180deg, rgba(9, 9, 11, 0) 0%, rgba(9, 9, 11, 0.95) 24%);
+  backdrop-filter: blur(2px);
+}
+
+.monocle-copilot-chat :where([class*="message"], [class*="Message"]) {
+  background: rgba(39, 39, 42, 0.45) !important;
+  border: 1px solid rgba(74, 222, 128, 0.16) !important;
+  border-radius: 12px !important;
 }

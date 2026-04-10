@@ -1,29 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useCopilotChatInternal } from "@copilotkit/react-core";
+import { CopilotChat } from "@copilotkit/react-ui";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardMain from "@/components/dashboard/DashboardMain";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import { useDashboardAction } from "@/components/actions/useDashboardAction";
+import { SYSTEM_PROMPT } from "@/lib/prompts/system";
 
 const SIDEBAR_COLLAPSED_KEY = "monocle-sidebar-collapsed";
 const ASSISTANT_REST = "Ask me anything";
-
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  loading?: boolean;
-};
 
 export default function CrmDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [quickInputOpen, setQuickInputOpen] = useState(false);
   const [quickQuery, setQuickQuery] = useState("");
-  const [panelInput, setPanelInput] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [thinking, setThinking] = useState(false);
   const [botHover, setBotHover] = useState(false);
+
+  // Register the render_dashboard generative-UI action
+  useDashboardAction();
+
+  // Used only by the quick-input bar to programmatically send a message
+  const { sendMessage: sendCopilotMessage, isLoading } = useCopilotChatInternal();
 
   useEffect(() => {
     try {
@@ -47,38 +47,18 @@ export default function CrmDashboard() {
     });
   }, []);
 
-  const sendMessage = useCallback(async (text: string) => {
-    const value = text.trim();
-    if (!value) return;
-
-    const userMessage: ChatMessage = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      content: value,
-    };
-    const loadingMessage: ChatMessage = {
-      id: `a-loading-${Date.now()}`,
-      role: "assistant",
-      content: "",
-      loading: true,
-    };
-
-    setMessages((prev) => [...prev, userMessage, loadingMessage]);
-    setThinking(true);
-
-    // Placeholder async response while backend integration is finalized.
-    await new Promise((resolve) => setTimeout(resolve, 1100));
-
-    const reply = `Got it. I am analyzing "${value}" now and preparing insights.`;
-    setMessages((prev) =>
-      prev.map((m) =>
-        m.id === loadingMessage.id
-          ? { id: `a-${Date.now()}`, role: "assistant", content: reply, loading: false }
-          : m,
-      ),
-    );
-    setThinking(false);
-  }, []);
+  const sendMessage = useCallback(
+    async (raw: string) => {
+      const text = raw.trim();
+      if (!text || isLoading) return;
+      await sendCopilotMessage({
+        id: `user-${Date.now()}`,
+        role: "user",
+        content: text,
+      });
+    },
+    [isLoading, sendCopilotMessage],
+  );
 
   return (
     <div className="flex h-screen overflow-hidden text-zinc-100">
@@ -94,6 +74,8 @@ export default function CrmDashboard() {
           <DashboardMain />
         </main>
       </div>
+
+      {/* ── AI Chat Panel ─────────────────────────────────────────────────── */}
       <aside
         className={`relative z-10 h-full shrink-0 border-l border-[color:var(--oa-border-green)] bg-zinc-950/90 backdrop-blur-md transition-all duration-300 ease-out ${
           chatOpen ? "w-[560px]" : "w-0 border-l-0"
@@ -101,15 +83,10 @@ export default function CrmDashboard() {
         aria-hidden={!chatOpen}
       >
         {chatOpen && (
-          <div
-            className={`flex h-full min-h-0 flex-col transition-all duration-300 ease-out ${
-              chatOpen ? "translate-x-0 opacity-100" : "translate-x-5 opacity-0"
-            }`}
-          >
+          <div className="flex h-full min-h-0 flex-col translate-x-0 opacity-100 transition-all duration-300 ease-out">
             <div className="min-h-0 flex-1 overflow-hidden p-4">
-              <div
-                className="relative flex h-full min-h-0 flex-col rounded-[28px] border border-emerald-500/30 bg-[linear-gradient(165deg,rgba(14,14,16,0.96)_0%,rgba(7,7,9,0.98)_100%)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_0_0_1px_rgba(0,0,0,0.45),0_0_22px_rgba(74,222,128,0.07)]"
-              >
+              <div className="relative flex h-full min-h-0 flex-col rounded-2xl border border-emerald-500/25 bg-zinc-950 overflow-hidden">
+                {/* Close button */}
                 <button
                   type="button"
                   onClick={() => setChatOpen(false)}
@@ -120,82 +97,25 @@ export default function CrmDashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
-                <div className="min-h-0 flex-1 overflow-y-auto rounded-2xl border border-white/[0.05] bg-black/20 p-3">
-                  {messages.length === 0 ? (
-                    <p className="text-sm text-zinc-500">Ask your first analytics question...</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {messages.map((message) =>
-                        message.role === "user" ? (
-                          <div key={message.id} className="flex w-full justify-end">
-                            <div className="flex max-w-[85%] items-start gap-1.5">
-                              <div className="w-fit rounded-2xl border border-white/[0.08] bg-white/[0.035] px-3 py-2 text-sm text-zinc-100">
-                                {message.content}
-                              </div>
-                              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-zinc-300">
-                                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                                </svg>
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div key={message.id} className="flex w-full justify-start">
-                            <div className="flex max-w-[88%] items-start gap-2">
-                              <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">
-                                <svg className="h-3 w-3" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
-                                  <path d="M8 1.5l1.3 3.2L12.5 6 9.3 7.3 8 10.5 6.7 7.3 3.5 6l3.2-1.3L8 1.5z" />
-                                </svg>
-                              </span>
-                              <div className="w-fit rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.08] px-3 py-2 text-sm text-zinc-100">
-                                {message.loading ? (
-                                  <span className="inline-flex items-center gap-1.5 text-zinc-300">
-                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300" />
-                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300 [animation-delay:120ms]" />
-                                    <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-300 [animation-delay:240ms]" />
-                                  </span>
-                                ) : (
-                                  message.content
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ),
-                      )}
-                    </div>
-                  )}
-                </div>
-                <form
-                  className="mt-3 flex items-center gap-2 rounded-2xl border border-emerald-500/25 bg-zinc-950/80 p-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void sendMessage(panelInput);
-                    setPanelInput("");
-                  }}
-                >
-                  <input
-                    type="text"
-                    value={panelInput}
-                    onChange={(e) => setPanelInput(e.target.value)}
-                    placeholder="Ask me anything..."
-                    className="min-w-0 flex-1 bg-transparent px-2 text-base text-zinc-100 placeholder:text-zinc-500 outline-none"
+
+                {/* CopilotChat — handles text messages + inline generative UI (dashboards) */}
+                <div className="monocle-copilot-chat">
+                  <CopilotChat
+                    instructions={SYSTEM_PROMPT}
+                    labels={{
+                      title: "Monocle",
+                      initial: "Ask me anything about your analytics — I'll query the data and build you a live dashboard.",
+                      placeholder: "Ask an analytics question...",
+                    }}
                   />
-                  <button
-                    type="submit"
-                    disabled={thinking}
-                    className="rounded-full p-2 text-zinc-400 transition hover:text-emerald-300 disabled:cursor-not-allowed disabled:opacity-40"
-                    aria-label="Send message"
-                  >
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </button>
-                </form>
+                </div>
               </div>
             </div>
           </div>
         )}
       </aside>
+
+      {/* ── Floating bot button + quick input bar ─────────────────────────── */}
       {!chatOpen && (
         <>
           {quickInputOpen && (
@@ -214,10 +134,13 @@ export default function CrmDashboard() {
                   e.preventDefault();
                   const value = quickQuery.trim();
                   if (!value) return;
-                  void sendMessage(value);
                   setQuickQuery("");
                   setQuickInputOpen(false);
                   setChatOpen(true);
+                  // Small delay so CopilotChat mounts before the message lands
+                  setTimeout(() => {
+                    void sendMessage(value);
+                  }, 120);
                 }}
               >
                 <input

@@ -5,7 +5,6 @@ import {
 import { getServiceAdapter } from "@/lib/llm";
 import { runAnalyticsQuery } from "@/lib/data/query";
 import { SCHEMA_DESCRIPTION } from "@/lib/data/schema";
-import { SYSTEM_PROMPT } from "@/lib/prompts/system";
 
 const runtime = new CopilotRuntime({
   actions: [
