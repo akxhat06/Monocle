@@ -290,54 +290,6 @@ export default function CrmDashboard() {
           </div>
         </>
       )}
-<<<<<<< HEAD
-
-      {/* Bubble wider than icon; icon stays 7rem; column centered so tail lines up with head. */}
-      <div className="pointer-events-none fixed bottom-9 right-9 z-50 flex flex-col items-center" aria-live="polite">
-        <button
-          type="button"
-          className="pointer-events-auto relative flex cursor-pointer flex-col items-center border-0 bg-transparent p-0"
-          onMouseEnter={() => setBotHover(true)}
-          onMouseLeave={() => setBotHover(false)}
-          onClick={toggleComposerFromBot}
-          aria-label="Assistant"
-          aria-expanded={composerMounted && composerEntered}
-        >
-          <div
-            className={`relative z-20 -mb-[4.25rem] transition duration-300 ease-out ${
-              tipVisible
-                ? "translate-x-3 -translate-y-8 scale-100 opacity-100"
-                : "pointer-events-none translate-x-3 -translate-y-5 scale-95 opacity-0"
-            }`}
-            aria-hidden={!tipVisible}
-          >
-            <div className="relative w-max max-w-[calc(100vw-2rem)]">
-              <div className="rounded-xl border border-emerald-500/30 bg-zinc-950/95 px-2.5 py-1.5 shadow-lg shadow-black/50 ring-1 ring-white/[0.06] backdrop-blur-md">
-                <p className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight text-zinc-100">
-                  <span className="text-emerald-300">Hey!!</span>{" "}
-                  <span className="font-medium text-zinc-200">{ASSISTANT_REST}</span>
-                </p>
-              </div>
-              {/* Tail reaches toward icon — overlaps top of SVG so gap vs white head closes */}
-              <div
-                className="absolute left-1/2 top-full z-10 -mt-px h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-emerald-500/30 border-t-0 border-l-0 bg-zinc-950/95"
-                aria-hidden
-              />
-            </div>
-          </div>
-          <img
-            src="/ai-chat-analytics.svg"
-            alt=""
-            aria-hidden
-            className="relative z-0 h-[7rem] w-[7rem] shrink-0 select-none opacity-95"
-            width={180}
-            height={180}
-            draggable={false}
-          />
-        </button>
-      </div>
-=======
->>>>>>> 31963a2 (Enhance Copilot integration with new UI components and styling)
     </div>
   );
 }
