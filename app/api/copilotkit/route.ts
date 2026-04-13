@@ -10,23 +10,43 @@ import { SCHEMA_DESCRIPTION } from "@/lib/prompts/system";
 
 /**
  * Wrap the base adapter to silently skip empty-message probe requests.
- * CopilotKit v1.55 sends these init/sync probes before any user message exists;
- * the Vercel AI SDK throws InvalidPromptError on empty message arrays.
- * Empty probes always have messages.length === 0.
+ *
+ * CopilotKit v1.55 sends init/sync probes that contain no user TextMessages.
+ * After the adapter converts them to AI SDK format the messages array is empty,
+ * and the Vercel AI SDK throws AI_InvalidPromptError.
+ *
+ * Strategy:
+ *  1. Check for any TextMessage with role=user before calling the AI.
+ *  2. As belt-and-suspenders, catch AI_InvalidPromptError and swallow it.
+ *
+ * Returning { threadId } without calling eventSource.stream() is intentional
+ * (same pattern as CopilotKit's own EmptyAdapter).
  */
 function guardedAdapter(base: CopilotServiceAdapter): CopilotServiceAdapter {
   return {
     ...base,
     async process(req: CopilotRuntimeChatCompletionRequest) {
-      if (req.messages.length === 0) {
-        // Complete the SSE stream immediately with no events so the client
-        // receives a clean empty response instead of an error.
-        await req.eventSource.stream(async (es) => {
-          es.complete();
-        });
+      // Check if there is at least one user TextMessage — probes have none.
+      type MaybeText = { type?: string; role?: string };
+      const hasUserText = req.messages.some(
+        (m) => (m as MaybeText).type === "TextMessage" && (m as MaybeText).role === "user",
+      );
+
+      if (!hasUserText) {
+        // Return an empty no-op response — same pattern as EmptyAdapter.
         return { threadId: req.threadId ?? "" };
       }
-      return base.process(req);
+
+      try {
+        return await base.process(req);
+      } catch (err: unknown) {
+        // Belt-and-suspenders: also catch the error if it slips through.
+        const name = (err as { name?: string } | null)?.name ?? "";
+        if (name === "AI_InvalidPromptError" || name === "InvalidPromptError") {
+          return { threadId: req.threadId ?? "" };
+        }
+        throw err;
+      }
     },
   };
 }
