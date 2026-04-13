@@ -8,47 +8,77 @@ import { getServiceAdapter } from "@/lib/llm";
 import { runAnalyticsQuery } from "@/lib/data/query";
 import { SCHEMA_DESCRIPTION } from "@/lib/prompts/system";
 
+type GuardedProcess = (req: CopilotRuntimeChatCompletionRequest) => Promise<{ threadId: string }>;
+
 /**
- * Wrap the base adapter to silently skip empty-message probe requests.
+ * Patch the adapter's process() method IN-PLACE so every call path
+ * (including CopilotKit-internal retries and suggestion runs) goes through
+ * the guard — not just the one we return from the factory.
  *
- * CopilotKit v1.55 sends init/sync probes that contain no user TextMessages.
- * After the adapter converts them to AI SDK format the messages array is empty,
- * and the Vercel AI SDK throws AI_InvalidPromptError.
- *
- * Strategy:
- *  1. Check for any TextMessage with role=user before calling the AI.
- *  2. As belt-and-suspenders, catch AI_InvalidPromptError and swallow it.
- *
- * Returning { threadId } without calling eventSource.stream() is intentional
- * (same pattern as CopilotKit's own EmptyAdapter).
+ * The { ...base, process: fn } spread approach only creates a new object;
+ * CopilotKit's runtime can still hold a reference to base.process directly
+ * and call it without going through our wrapper, causing InvalidPromptError
+ * when probe/init requests with empty messages reach the AI SDK.
  */
 function guardedAdapter(base: CopilotServiceAdapter): CopilotServiceAdapter {
-  return {
-    ...base,
-    async process(req: CopilotRuntimeChatCompletionRequest) {
-      // Check if there is at least one user TextMessage — probes have none.
-      type MaybeText = { type?: string; role?: string };
-      const hasUserText = req.messages.some(
-        (m) => (m as MaybeText).type === "TextMessage" && (m as MaybeText).role === "user",
-      );
+  const originalProcess: GuardedProcess = base.process.bind(base);
 
-      if (!hasUserText) {
-        // Return an empty no-op response — same pattern as EmptyAdapter.
+  const completeStream = async (req: CopilotRuntimeChatCompletionRequest) => {
+    try {
+      await req.eventSource.stream(async (es) => {
+        // RuntimeEventSubject extends ReplaySubject — complete() closes the stream
+        (es as unknown as { complete(): void }).complete();
+      });
+    } catch {
+      /* ignore stream errors */
+    }
+  };
+
+  const guarded: GuardedProcess = async (req) => {
+    // Only call the AI when there is a real, non-empty user message.
+    // Probe/init requests have no user messages (or empty content).
+    //
+    // NOTE: do NOT check msg.type === "TextMessage" here.
+    // AG-UI format messages have NO type field — checking it would incorrectly
+    // classify real user messages as probes and silently swallow them.
+    type MaybeMsg = { role?: string; content?: unknown };
+    const hasRealUserMsg = req.messages.some((m) => {
+      const msg = m as MaybeMsg;
+      if (msg.role !== "user") return false;
+      // content can be a string or content-part array
+      const text =
+        typeof msg.content === "string"
+          ? msg.content
+          : Array.isArray(msg.content)
+            ? (msg.content as Array<{ text?: string }>)
+                .map((p) => p.text ?? "")
+                .join("")
+            : "";
+      return Boolean(text.trim());
+    });
+
+    if (!hasRealUserMsg) {
+      await completeStream(req);
+      return { threadId: req.threadId ?? "" };
+    }
+
+    try {
+      return await originalProcess(req);
+    } catch (err: unknown) {
+      const name = (err as { name?: string } | null)?.name ?? "";
+      if (name === "AI_InvalidPromptError" || name === "InvalidPromptError") {
+        await completeStream(req);
         return { threadId: req.threadId ?? "" };
       }
-
-      try {
-        return await base.process(req);
-      } catch (err: unknown) {
-        // Belt-and-suspenders: also catch the error if it slips through.
-        const name = (err as { name?: string } | null)?.name ?? "";
-        if (name === "AI_InvalidPromptError" || name === "InvalidPromptError") {
-          return { threadId: req.threadId ?? "" };
-        }
-        throw err;
-      }
-    },
+      throw err;
+    }
   };
+
+  // Patch in-place: this replaces process() on the instance so any internal
+  // CopilotKit call that reaches base.process also hits our guard.
+  (base as unknown as { process: GuardedProcess }).process = guarded;
+
+  return base;
 }
 
 const runtime = new CopilotRuntime({

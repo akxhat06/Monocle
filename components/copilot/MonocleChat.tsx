@@ -110,15 +110,28 @@ export default function MonocleChat({ initialMessage, onReady }: MonocleChatProp
 
   const [input, setInput] = useState("");
   const [counts, setCounts] = useState<OverviewCounts | null>(null);
-  // Show optimistic user bubble immediately while the message is in-flight
+
+  // Optimistic user bubbles — shown immediately on submit, before CopilotKit
+  // updates the `messages` state (which can be slightly delayed).
+  // Initialize to initialMessage so it shows even before the effect fires.
   const [pendingUserMsg, setPendingUserMsg] = useState<string | null>(
     initialMessage ?? null,
   );
+
+  // Belt-and-suspenders: also set via effect in case the prop arrives after first render
+  const prevInitial = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (initialMessage && initialMessage !== prevInitial.current) {
+      prevInitial.current = initialMessage;
+      setPendingUserMsg(initialMessage);
+    }
+  }, [initialMessage]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
 
-  // Fetch real counts from the API to show in the empty-state KPI cards
+  // Fetch real counts for the empty-state KPI cards
   useEffect(() => {
     fetch("/api/overview/counts", { credentials: "same-origin" })
       .then((r) => r.json())
@@ -136,12 +149,12 @@ export default function MonocleChat({ initialMessage, onReady }: MonocleChatProp
     ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
   }, [input]);
 
-  // Scroll to bottom on new messages or loading change
+  // Scroll to bottom whenever messages or loading state changes
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, pendingUserMsg]);
 
-  // Send initial message if provided (e.g. submitted from the preview panel)
+  // Send the initial message from the preview panel on first mount
   useEffect(() => {
     if (initialMessage && !sentInitial.current && !isLoading) {
       sentInitial.current = true;
@@ -150,22 +163,40 @@ export default function MonocleChat({ initialMessage, onReady }: MonocleChatProp
     }
   }, [initialMessage, sendMessage, isLoading, onReady]);
 
-  // Once the message lands in the real messages list, drop the optimistic bubble
+  // Drop the optimistic bubble only when CopilotKit's messages actually contain
+  // a real user TextMessage (i.e. not just internal probe/system messages).
+  // Checking for non-empty role === "user" text avoids false-clearing on mount
+  // caused by CopilotKit's persisted state having old internal messages.
   useEffect(() => {
-    if (pendingUserMsg && messages.some((m) => (m as {role?:string}).role === "user")) {
-      setPendingUserMsg(null);
-    }
+    if (!pendingUserMsg) return;
+    const msgs = messages as unknown as AnyMessage[];
+    const hasRealUserMsg = msgs.some(
+      (m) => m.role === "user" && Boolean(extractText(m.content).trim()),
+    );
+    if (hasRealUserMsg) setPendingUserMsg(null);
   }, [messages, pendingUserMsg]);
+
+  // Track whether we already have an in-flight send so we don't double-send
+  const sendingRef = useRef(false);
 
   const submit = useCallback(
     async (text: string) => {
       const trimmed = text.trim();
-      if (!trimmed || isLoading) return;
+      // Don't check isLoading here — probe requests briefly set it to true,
+      // which would silently swallow the user's click.
+      if (!trimmed || sendingRef.current) return;
+      sendingRef.current = true;
       setInput("");
       if (textareaRef.current) textareaRef.current.style.height = "auto";
-      await sendMessage({ id: `user-${Date.now()}`, role: "user", content: trimmed });
+      // Show the user bubble immediately — don't wait for CopilotKit state
+      setPendingUserMsg(trimmed);
+      try {
+        await sendMessage({ id: `user-${Date.now()}`, role: "user", content: trimmed });
+      } finally {
+        sendingRef.current = false;
+      }
     },
-    [isLoading, sendMessage],
+    [sendMessage],
   );
 
   const handleKeyDown = useCallback(
@@ -193,11 +224,14 @@ export default function MonocleChat({ initialMessage, onReady }: MonocleChatProp
     return false;
   });
 
+  // Hide the empty state as soon as there's a pending message OR real messages
+  const showEmptyState = visible.length === 0 && !pendingUserMsg && !isLoading;
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* ── Message list ───────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3 scroll-smooth">
-        {visible.length === 0 && (
+        {showEmptyState && (
           <div className="flex flex-col gap-3 pb-4">
             {/* Header */}
             <div className="pt-1">
@@ -303,8 +337,9 @@ export default function MonocleChat({ initialMessage, onReady }: MonocleChatProp
           return null;
         })}
 
-        {/* Optimistic user bubble: shown immediately while initialMessage is in-flight */}
-        {pendingUserMsg && visible.length === 0 && (
+        {/* Optimistic user bubble — shown immediately on ANY submit, before
+            CopilotKit's async state update reflects the message */}
+        {pendingUserMsg && (
           <div className="flex justify-end">
             <div className="max-w-[85%] rounded-2xl rounded-br-sm border border-white/[0.09] bg-white/[0.06] px-3.5 py-2.5 text-sm text-zinc-100 leading-relaxed">
               {pendingUserMsg}
@@ -312,8 +347,8 @@ export default function MonocleChat({ initialMessage, onReady }: MonocleChatProp
           </div>
         )}
 
-        {/* Loading dots — shown while AI is responding */}
-        {(isLoading || (pendingUserMsg && visible.length === 0)) && <TypingDots />}
+        {/* Loading dots — shown as soon as a message is sent, until response arrives */}
+        {(isLoading || Boolean(pendingUserMsg)) && <TypingDots />}
 
         <div ref={bottomRef} />
       </div>
@@ -328,7 +363,7 @@ export default function MonocleChat({ initialMessage, onReady }: MonocleChatProp
             onKeyDown={handleKeyDown}
             rows={1}
             placeholder="Ask an analytics question…"
-            disabled={isLoading}
+            disabled={Boolean(pendingUserMsg)}
             className="flex-1 resize-none bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 outline-none disabled:opacity-50 leading-relaxed"
             style={{ minHeight: "22px", maxHeight: "120px" }}
           />
