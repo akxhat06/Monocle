@@ -1,14 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import db from "@/lib/db/postgres";
 import type { OverviewCounts } from "@/lib/overview/types";
-
-function toDayStartIso(dateStr: string): string {
-  return `${dateStr}T00:00:00.000Z`;
-}
-
-function toDayEndIso(dateStr: string): string {
-  return `${dateStr}T23:59:59.999Z`;
-}
 
 function defaultRange(): { from: string; to: string } {
   const to = new Date();
@@ -21,12 +14,9 @@ function defaultRange(): { from: string; to: string } {
 }
 
 export async function GET(request: Request) {
+  // Auth check via Supabase (auth only)
   const supabase = createServerSupabaseClient();
-  const {
-    data: { user },
-    error: userErr,
-  } = await supabase.auth.getUser();
-
+  const { data: { user }, error: userErr } = await supabase.auth.getUser();
   if (userErr || !user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -42,88 +32,44 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid range: from must be before to" }, { status: 400 });
   }
 
-  const fromTs = toDayStartIso(from);
-  const toTs = toDayEndIso(to);
-
-  const countInRange = async (
-    table: "questions" | "errors" | "asr_logs" | "tts_logs" | "tool_calls",
-    column: "created_at" = "created_at",
-  ) => {
-    const { count, error } = await supabase
-      .from(table)
-      .select("id", { count: "exact", head: true })
-      .gte(column, fromTs)
-      .lte(column, toTs);
-    if (error) throw new Error(`${table}: ${error.message}`);
-    return count ?? 0;
-  };
+  const fromTs = `${from}T00:00:00.000Z`;
+  const toTs = `${to}T23:59:59.999Z`;
 
   try {
-    const [
-      usersTotalRes,
-      usersActiveRes,
-      sessionsTotalRes,
-      sessionsInRangeRes,
-      questionsTotalRes,
-      questionsInRange,
-      errorsTotalRes,
-      errorsInRange,
-      asrTotalRes,
-      asrInRange,
-      ttsTotalRes,
-      ttsInRange,
-      toolTotalRes,
-      toolInRange,
-    ] = await Promise.all([
-      supabase.from("users").select("id", { count: "exact", head: true }),
-      supabase
-        .from("users")
-        .select("id", { count: "exact", head: true })
-        .gte("last_seen", fromTs)
-        .lte("last_seen", toTs),
-      supabase.from("sessions").select("session_id", { count: "exact", head: true }),
-      supabase
-        .from("sessions")
-        .select("session_id", { count: "exact", head: true })
-        .gte("start_time", fromTs)
-        .lte("start_time", toTs),
-      supabase.from("questions").select("id", { count: "exact", head: true }),
-      countInRange("questions"),
-      supabase.from("errors").select("id", { count: "exact", head: true }),
-      countInRange("errors"),
-      supabase.from("asr_logs").select("id", { count: "exact", head: true }),
-      countInRange("asr_logs"),
-      supabase.from("tts_logs").select("id", { count: "exact", head: true }),
-      countInRange("tts_logs"),
-      supabase.from("tool_calls").select("id", { count: "exact", head: true }),
-      countInRange("tool_calls"),
-    ]);
-
-    if (usersTotalRes.error) throw new Error(`users: ${usersTotalRes.error.message}`);
-    if (usersActiveRes.error) throw new Error(`users (active): ${usersActiveRes.error.message}`);
-    if (sessionsTotalRes.error) throw new Error(`sessions (total): ${sessionsTotalRes.error.message}`);
-    if (sessionsInRangeRes.error) throw new Error(`sessions: ${sessionsInRangeRes.error.message}`);
-    if (questionsTotalRes.error) throw new Error(`questions (total): ${questionsTotalRes.error.message}`);
-    if (errorsTotalRes.error) throw new Error(`errors (total): ${errorsTotalRes.error.message}`);
-    if (asrTotalRes.error) throw new Error(`asr_logs (total): ${asrTotalRes.error.message}`);
-    if (ttsTotalRes.error) throw new Error(`tts_logs (total): ${ttsTotalRes.error.message}`);
-    if (toolTotalRes.error) throw new Error(`tool_calls (total): ${toolTotalRes.error.message}`);
+    // Single query fetches all counts at once — much faster than 14 round-trips
+    const [row] = await db`
+      SELECT
+        (SELECT count(*)::int FROM users)                                                        AS users_total,
+        (SELECT count(*)::int FROM users WHERE last_seen BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS users_active,
+        (SELECT count(*)::int FROM sessions)                                                     AS sessions_total,
+        (SELECT count(*)::int FROM sessions WHERE start_time BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS sessions_in_range,
+        (SELECT count(*)::int FROM questions)                                                    AS questions_total,
+        (SELECT count(*)::int FROM questions WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS questions_in_range,
+        (SELECT count(*)::int FROM errors)                                                       AS errors_total,
+        (SELECT count(*)::int FROM errors WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz)   AS errors_in_range,
+        (SELECT count(*)::int FROM asr_logs)                                                     AS asr_total,
+        (SELECT count(*)::int FROM asr_logs WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS asr_in_range,
+        (SELECT count(*)::int FROM tts_logs)                                                     AS tts_total,
+        (SELECT count(*)::int FROM tts_logs WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS tts_in_range,
+        (SELECT count(*)::int FROM tool_calls)                                                   AS tool_total,
+        (SELECT count(*)::int FROM tool_calls WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS tool_in_range
+    ` as Record<string, number>[];
 
     const counts: OverviewCounts = {
-      users: usersTotalRes.count ?? 0,
-      usersActiveInRange: usersActiveRes.count ?? 0,
-      sessions: sessionsTotalRes.count ?? 0,
-      sessionsInRange: sessionsInRangeRes.count ?? 0,
-      questions: questionsTotalRes.count ?? 0,
-      questionsInRange,
-      errors: errorsTotalRes.count ?? 0,
-      errorsInRange,
-      asrLogs: asrTotalRes.count ?? 0,
-      asrLogsInRange: asrInRange,
-      ttsLogs: ttsTotalRes.count ?? 0,
-      ttsLogsInRange: ttsInRange,
-      toolCalls: toolTotalRes.count ?? 0,
-      toolCallsInRange: toolInRange,
+      users: row.users_total,
+      usersActiveInRange: row.users_active,
+      sessions: row.sessions_total,
+      sessionsInRange: row.sessions_in_range,
+      questions: row.questions_total,
+      questionsInRange: row.questions_in_range,
+      errors: row.errors_total,
+      errorsInRange: row.errors_in_range,
+      asrLogs: row.asr_total,
+      asrLogsInRange: row.asr_in_range,
+      ttsLogs: row.tts_total,
+      ttsLogsInRange: row.tts_in_range,
+      toolCalls: row.tool_total,
+      toolCallsInRange: row.tool_in_range,
     };
 
     return NextResponse.json({ from, to, counts });

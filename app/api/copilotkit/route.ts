@@ -4,7 +4,7 @@ import {
 } from "@copilotkit/runtime";
 import { getServiceAdapter } from "@/lib/llm";
 import { runAnalyticsQuery } from "@/lib/data/query";
-import { SCHEMA_DESCRIPTION } from "@/lib/data/schema";
+import { SCHEMA_DESCRIPTION } from "@/lib/prompts/system";
 
 const runtime = new CopilotRuntime({
   actions: [

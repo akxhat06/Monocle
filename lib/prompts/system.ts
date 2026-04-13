@@ -85,7 +85,7 @@ Useful queries: sessions per day, avg session duration (end_time - start_time), 
 Duration calculation: EXTRACT(EPOCH FROM (end_time - start_time)) / 60 gives minutes.
 
 ### Table: questions (50,000 rows)
-Questions asked by users to the voice assistant.
+Questions asked by users via voice or chat.
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -93,10 +93,11 @@ Questions asked by users to the voice assistant.
 | session_id | text | Session this question was asked in |
 | user_id | text | User who asked |
 | question_text | text | The actual question asked |
+| channel | text | Interaction channel — either 'voice' or 'chat' |
 | created_at | timestamptz | When the question was asked |
 
 Known question_text values: 'PM Kisan payment not received', 'How to check PMFBY status', 'Weather forecast today', 'Mandi price for wheat', 'Soil health card status'.
-Useful queries: most common questions, questions over time, questions per session.
+Useful queries: most common questions, questions over time, questions per session, voice vs chat breakdown, channel comparison over time.
 
 ### Table: errors (10,000 rows)
 Errors that occurred during sessions.
@@ -208,6 +209,12 @@ FROM tool_calls GROUP BY session_id
 **"Why are errors spiking?"**
 → Query: errors by day + by error_message, cross-referenced with sessions by day
 → Dashboard: col of [KPI card with error rate, stacked area of errors by type over time, table of top sessions with most errors]
+
+**"How many questions in voice vs chat last month?"** (or any voice/chat channel question)
+→ Query 1: SELECT channel, count(*) as total FROM questions WHERE created_at >= date_trunc('month', now() - interval '1 month') AND created_at < date_trunc('month', now()) GROUP BY channel
+→ Query 2 (trend): SELECT date_trunc('day', created_at)::date as day, channel, count(*) as questions FROM questions WHERE created_at >= now() - interval '30 days' GROUP BY day, channel ORDER BY day
+→ Dashboard: row of [grid(cols=2) of KPI cards (voice total + chat total), bar chart of voice vs chat by day (stacked area or grouped bar)]
+→ If user just says "questions by channel" without specifying a time range, default to last 30 days.
 `;
 
 export const SCHEMA_DESCRIPTION = `
@@ -215,7 +222,7 @@ Available tables in the database:
 
 Table: users (5K rows) — id (text PK), first_seen (timestamptz), last_seen (timestamptz), session_count (int), is_returning (boolean)
 Table: sessions (20K rows) — session_id (text PK), user_id (text FK→users), start_time (timestamptz), end_time (timestamptz), total_events (int)
-Table: questions (50K rows) — id (bigserial PK), session_id (text), user_id (text), question_text (text), created_at (timestamptz)
+Table: questions (50K rows) — id (bigserial PK), session_id (text), user_id (text), question_text (text), channel (text: 'voice'|'chat'), created_at (timestamptz)
 Table: errors (10K rows) — id (bigserial PK), session_id (text), user_id (text), error_message (text), created_at (timestamptz)
 Table: asr_logs (30K rows) — id (bigserial PK), session_id (text), user_id (text), transcript (text), confidence (float 0-1), created_at (timestamptz)
 Table: tts_logs (30K rows) — id (bigserial PK), session_id (text), user_id (text), text (text), created_at (timestamptz)
