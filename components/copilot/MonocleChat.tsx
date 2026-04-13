@@ -3,6 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useCopilotChatInternal, useCopilotAdditionalInstructions } from "@copilotkit/react-core";
 import { SYSTEM_PROMPT } from "@/lib/prompts/system";
+import type { OverviewCounts, OverviewCountsResponse } from "@/lib/overview/types";
 import KpiCard from "@/components/widgets/KpiCard";
 import BarChartWidget from "@/components/widgets/BarChartWidget";
 import LineChartWidget from "@/components/widgets/LineChartWidget";
@@ -18,6 +19,13 @@ type AnyMessage = {
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmtCount(n: number | undefined): string {
+  if (n === undefined) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return n.toString();
+}
 
 function extractText(content: unknown): string {
   if (typeof content === "string") return content;
@@ -99,9 +107,20 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
     useCopilotChatInternal();
 
   const [input, setInput] = useState("");
+  const [counts, setCounts] = useState<OverviewCounts | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
+
+  // Fetch real counts from the API to show in the empty-state KPI cards
+  useEffect(() => {
+    fetch("/api/overview/counts", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((body: OverviewCountsResponse & { error?: string }) => {
+        if (body.counts) setCounts(body.counts);
+      })
+      .catch(() => {/* silently ignore — preview falls back to null */});
+  }, []);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -171,12 +190,12 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
               <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">What I can build for you</p>
             </div>
 
-            {/* KPI cards — all in one row */}
+            {/* KPI cards — real counts from the API */}
             <div className="grid grid-cols-4 gap-1.5">
-              <KpiCard label="Users" value="49.5k" delta="+8%" compact />
-              <KpiCard label="Calls" value="233k" delta="+12%" compact />
-              <KpiCard label="Questions" value="1.7M" delta="+5%" compact />
-              <KpiCard label="Errors" value="2.6k" delta="-3%" compact />
+              <KpiCard label="Users"     value={fmtCount(counts?.users)}     compact />
+              <KpiCard label="Calls"     value={fmtCount(counts?.calls)}     compact />
+              <KpiCard label="Questions" value={fmtCount(counts?.questions)} compact />
+              <KpiCard label="Errors"    value={fmtCount(counts?.errors)}    compact />
             </div>
 
             {/* Charts — side by side, compact height */}
