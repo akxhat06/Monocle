@@ -6,17 +6,19 @@ export default function AreaChartWidget({
   title,
   data,
   xKey,
-  yKeys
+  yKeys,
+  chartHeight = 288,
 }: {
   title?: string;
   data: Array<Record<string, unknown>>;
   xKey: string;
   yKeys: string[];
+  chartHeight?: number;
 }) {
   return (
     <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
       {title ? <h3 className="mb-3 text-sm font-medium">{title}</h3> : null}
-      <div className="h-72">
+      <div style={{ height: chartHeight }}>
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />

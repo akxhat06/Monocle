@@ -62,7 +62,7 @@ export default function CrmDashboard() {
       {/* ── AI Chat Panel ─────────────────────────────────────────────────── */}
       <aside
         className={`relative z-10 h-full shrink-0 border-l border-[color:var(--oa-border-green)] bg-zinc-950/90 backdrop-blur-md transition-all duration-300 ease-out ${
-          chatOpen ? "w-[420px]" : "w-0 border-l-0 overflow-hidden"
+          chatOpen ? "w-[560px]" : "w-0 border-l-0 overflow-hidden"
         }`}
         aria-hidden={!chatOpen}
       >

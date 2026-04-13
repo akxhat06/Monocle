@@ -165,52 +165,52 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
       {/* ── Message list ───────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3 scroll-smooth">
         {visible.length === 0 && (
-          <div className="flex flex-col gap-4 pb-4">
+          <div className="flex flex-col gap-3 pb-4">
             {/* Header */}
-            <div className="text-center pt-2">
-              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">What I can build for you</p>
+            <div className="pt-1">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">What I can build for you</p>
             </div>
 
-            {/* KPI preview */}
-            <div className="grid grid-cols-2 gap-2">
-              <KpiCard label="Total Users" value="49,574" delta="+8.3%" />
-              <KpiCard label="Total Calls" value="232,991" delta="+12.1%" />
+            {/* KPI cards — all in one row */}
+            <div className="grid grid-cols-4 gap-1.5">
+              <KpiCard label="Users" value="49.5k" delta="+8%" compact />
+              <KpiCard label="Calls" value="233k" delta="+12%" compact />
+              <KpiCard label="Questions" value="1.7M" delta="+5%" compact />
+              <KpiCard label="Errors" value="2.6k" delta="-3%" compact />
             </div>
 
-            {/* Bar chart preview */}
-            <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
+            {/* Charts — side by side, compact height */}
+            <div className="grid grid-cols-2 gap-1.5">
               <BarChartWidget
-                title="Questions by Channel"
+                title="By Channel"
                 data={[
                   { channel: "Voice", questions: 1420000 },
                   { channel: "Chat", questions: 305696 },
                 ]}
                 xKey="channel"
                 yKeys={["questions"]}
+                chartHeight={120}
               />
-            </div>
-
-            {/* Line chart preview */}
-            <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
               <LineChartWidget
-                title="Calls Over Time (sample)"
+                title="Calls Trend"
                 data={[
-                  { day: "Mon", calls: 820 },
-                  { day: "Tue", calls: 950 },
-                  { day: "Wed", calls: 1100 },
-                  { day: "Thu", calls: 870 },
-                  { day: "Fri", calls: 1230 },
-                  { day: "Sat", calls: 650 },
-                  { day: "Sun", calls: 480 },
+                  { day: "M", calls: 820 },
+                  { day: "T", calls: 950 },
+                  { day: "W", calls: 1100 },
+                  { day: "T", calls: 870 },
+                  { day: "F", calls: 1230 },
+                  { day: "S", calls: 650 },
+                  { day: "S", calls: 480 },
                 ]}
                 xKey="day"
                 yKeys={["calls"]}
+                chartHeight={120}
               />
             </div>
 
             {/* Quick prompts */}
             <div className="flex flex-col gap-1.5">
-              <p className="text-[10px] uppercase tracking-widest text-zinc-600 px-0.5">Try asking</p>
+              <p className="text-[10px] uppercase tracking-widest text-zinc-600">Try asking</p>
               {[
                 "Give me a platform overview",
                 "How are calls trending this month?",
@@ -221,7 +221,7 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
                   key={q}
                   type="button"
                   onClick={() => void submit(q)}
-                  className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900/50 px-3 py-2 text-left text-xs text-zinc-400 transition hover:border-emerald-500/40 hover:text-zinc-200"
+                  className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900/50 px-3 py-1.5 text-left text-xs text-zinc-400 transition hover:border-emerald-500/40 hover:text-zinc-200"
                 >
                   {q}
                 </button>
