@@ -95,11 +95,13 @@ function TypingDots() {
 // ── Main component ────────────────────────────────────────────────────────────
 
 interface MonocleChatProps {
-  /** Optional initial message to send once the chat mounts */
+  /** Optional initial message to send as soon as the chat mounts */
   initialMessage?: string;
+  /** Called after the initial message is sent (so parent can clear pendingMessage) */
+  onReady?: () => void;
 }
 
-export default function MonocleChat({ initialMessage }: MonocleChatProps) {
+export default function MonocleChat({ initialMessage, onReady }: MonocleChatProps) {
   // Register system prompt — stable empty deps means it only runs once on mount.
   useCopilotAdditionalInstructions({ instructions: SYSTEM_PROMPT }, []);
 
@@ -108,6 +110,10 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
 
   const [input, setInput] = useState("");
   const [counts, setCounts] = useState<OverviewCounts | null>(null);
+  // Show optimistic user bubble immediately while the message is in-flight
+  const [pendingUserMsg, setPendingUserMsg] = useState<string | null>(
+    initialMessage ?? null,
+  );
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentInitial = useRef(false);
@@ -119,7 +125,7 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
       .then((body: OverviewCountsResponse & { error?: string }) => {
         if (body.counts) setCounts(body.counts);
       })
-      .catch(() => {/* silently ignore — preview falls back to null */});
+      .catch(() => {});
   }, []);
 
   // Auto-resize textarea
@@ -130,18 +136,26 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
     ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
   }, [input]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages or loading change
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isLoading]);
 
-  // Send initial message if provided (e.g. from the quick-input bar)
+  // Send initial message if provided (e.g. submitted from the preview panel)
   useEffect(() => {
     if (initialMessage && !sentInitial.current && !isLoading) {
       sentInitial.current = true;
-      void sendMessage({ id: `user-init-${Date.now()}`, role: "user", content: initialMessage });
+      void sendMessage({ id: `user-init-${Date.now()}`, role: "user", content: initialMessage })
+        .then(() => onReady?.());
     }
-  }, [initialMessage, sendMessage, isLoading]);
+  }, [initialMessage, sendMessage, isLoading, onReady]);
+
+  // Once the message lands in the real messages list, drop the optimistic bubble
+  useEffect(() => {
+    if (pendingUserMsg && messages.some((m) => (m as {role?:string}).role === "user")) {
+      setPendingUserMsg(null);
+    }
+  }, [messages, pendingUserMsg]);
 
   const submit = useCallback(
     async (text: string) => {
@@ -266,7 +280,6 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
             const hasGenUI = typeof genUI === "function";
             const hasText = Boolean(text);
 
-            // Skip empty messages (already filtered above, but belt-and-suspenders)
             if (!hasGenUI && !hasText) return null;
 
             return (
@@ -290,7 +303,18 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
           return null;
         })}
 
-        {isLoading && <TypingDots />}
+        {/* Optimistic user bubble: shown immediately while initialMessage is in-flight */}
+        {pendingUserMsg && visible.length === 0 && (
+          <div className="flex justify-end">
+            <div className="max-w-[85%] rounded-2xl rounded-br-sm border border-white/[0.09] bg-white/[0.06] px-3.5 py-2.5 text-sm text-zinc-100 leading-relaxed">
+              {pendingUserMsg}
+            </div>
+          </div>
+        )}
+
+        {/* Loading dots — shown while AI is responding */}
+        {(isLoading || (pendingUserMsg && visible.length === 0)) && <TypingDots />}
+
         <div ref={bottomRef} />
       </div>
 
