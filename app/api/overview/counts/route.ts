@@ -36,40 +36,35 @@ export async function GET(request: Request) {
   const toTs = `${to}T23:59:59.999Z`;
 
   try {
-    // Single query fetches all counts at once — much faster than 14 round-trips
     const [row] = await db`
       SELECT
-        (SELECT count(*)::int FROM users)                                                        AS users_total,
-        (SELECT count(*)::int FROM users WHERE last_seen BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS users_active,
-        (SELECT count(*)::int FROM sessions)                                                     AS sessions_total,
-        (SELECT count(*)::int FROM sessions WHERE start_time BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS sessions_in_range,
-        (SELECT count(*)::int FROM questions)                                                    AS questions_total,
+        (SELECT count(*)::int FROM users)                                                                             AS users_total,
+        (SELECT count(*)::int FROM users WHERE last_seen_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS users_active,
+        (SELECT count(*)::int FROM calls)                                                                             AS calls_total,
+        (SELECT count(*)::int FROM calls WHERE start_datetime BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS calls_in_range,
+        (SELECT count(*)::int FROM questions)                                                                         AS questions_total,
         (SELECT count(*)::int FROM questions WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS questions_in_range,
-        (SELECT count(*)::int FROM errors)                                                       AS errors_total,
-        (SELECT count(*)::int FROM errors WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz)   AS errors_in_range,
-        (SELECT count(*)::int FROM asr_logs)                                                     AS asr_total,
-        (SELECT count(*)::int FROM asr_logs WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS asr_in_range,
-        (SELECT count(*)::int FROM tts_logs)                                                     AS tts_total,
-        (SELECT count(*)::int FROM tts_logs WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS tts_in_range,
-        (SELECT count(*)::int FROM tool_calls)                                                   AS tool_total,
-        (SELECT count(*)::int FROM tool_calls WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS tool_in_range
+        (SELECT count(*)::int FROM errordetails)                                                                      AS errors_total,
+        (SELECT count(*)::int FROM errordetails WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS errors_in_range,
+        (SELECT count(*)::int FROM asr_details)                                                                      AS asr_total,
+        (SELECT count(*)::int FROM asr_details WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS asr_in_range,
+        (SELECT count(*)::int FROM tts_details)                                                                      AS tts_total,
+        (SELECT count(*)::int FROM tts_details WHERE created_at BETWEEN ${fromTs}::timestamptz AND ${toTs}::timestamptz) AS tts_in_range
     ` as Record<string, number>[];
 
     const counts: OverviewCounts = {
       users: row.users_total,
       usersActiveInRange: row.users_active,
-      sessions: row.sessions_total,
-      sessionsInRange: row.sessions_in_range,
+      calls: row.calls_total,
+      callsInRange: row.calls_in_range,
       questions: row.questions_total,
       questionsInRange: row.questions_in_range,
       errors: row.errors_total,
       errorsInRange: row.errors_in_range,
-      asrLogs: row.asr_total,
-      asrLogsInRange: row.asr_in_range,
-      ttsLogs: row.tts_total,
-      ttsLogsInRange: row.tts_in_range,
-      toolCalls: row.tool_total,
-      toolCallsInRange: row.tool_in_range,
+      asrDetails: row.asr_total,
+      asrDetailsInRange: row.asr_in_range,
+      ttsDetails: row.tts_total,
+      ttsDetailsInRange: row.tts_in_range,
     };
 
     return NextResponse.json({ from, to, counts });

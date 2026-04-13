@@ -14,12 +14,11 @@ const METRIC_ROWS: {
   trendKey: keyof OverviewCounts;
 }[] = [
   { key: "users", title: "Users", trendKey: "usersActiveInRange" },
-  { key: "sessions", title: "Sessions", trendKey: "sessionsInRange" },
+  { key: "calls", title: "Calls", trendKey: "callsInRange" },
   { key: "questions", title: "Questions", trendKey: "questionsInRange" },
   { key: "errors", title: "Errors", trendKey: "errorsInRange" },
-  { key: "asrLogs", title: "ASR logs", trendKey: "asrLogsInRange" },
-  { key: "ttsLogs", title: "TTS logs", trendKey: "ttsLogsInRange" },
-  { key: "toolCalls", title: "Tool calls", trendKey: "toolCallsInRange" },
+  { key: "asrDetails", title: "ASR", trendKey: "asrDetailsInRange" },
+  { key: "ttsDetails", title: "TTS", trendKey: "ttsDetailsInRange" },
 ];
 
 type MetricTheme = {
@@ -38,7 +37,7 @@ const METRIC_THEME: Record<OverviewDisplayMetricKey, MetricTheme> = {
     badge: "bg-emerald-500/18",
     badgeText: "text-emerald-200",
   },
-  sessions: {
+  calls: {
     hex: "#38bdf8",
     iconWrap: "bg-sky-500/15",
     iconRing: "ring-sky-500/25",
@@ -59,26 +58,19 @@ const METRIC_THEME: Record<OverviewDisplayMetricKey, MetricTheme> = {
     badge: "bg-rose-500/18",
     badgeText: "text-rose-200",
   },
-  asrLogs: {
+  asrDetails: {
     hex: "#fbbf24",
     iconWrap: "bg-amber-500/15",
     iconRing: "ring-amber-500/25",
     badge: "bg-amber-500/18",
     badgeText: "text-amber-200",
   },
-  ttsLogs: {
+  ttsDetails: {
     hex: "#2dd4bf",
     iconWrap: "bg-teal-500/15",
     iconRing: "ring-teal-500/25",
     badge: "bg-teal-500/18",
     badgeText: "text-teal-200",
-  },
-  toolCalls: {
-    hex: "#a3e635",
-    iconWrap: "bg-lime-500/15",
-    iconRing: "ring-lime-500/25",
-    badge: "bg-lime-500/18",
-    badgeText: "text-lime-200",
   },
 };
 
@@ -122,10 +114,10 @@ function MetricIcon({ metric }: { metric: OverviewDisplayMetricKey }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.118a7.5 7.5 0 0115 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
         </svg>
       );
-    case "sessions":
+    case "calls":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5a2.25 2.25 0 002.25-2.25m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5a2.25 2.25 0 012.25 2.25v7.5" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
         </svg>
       );
     case "questions":
@@ -140,26 +132,16 @@ function MetricIcon({ metric }: { metric: OverviewDisplayMetricKey }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
         </svg>
       );
-    case "asrLogs":
+    case "asrDetails":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z" />
         </svg>
       );
-    case "ttsLogs":
+    case "ttsDetails":
       return (
         <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75} aria-hidden>
           <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-        </svg>
-      );
-    case "toolCalls":
-      return (
-        <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.65} aria-hidden>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"
-          />
         </svg>
       );
     default:

@@ -1,13 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useCopilotChatInternal } from "@copilotkit/react-core";
-import { CopilotChat } from "@copilotkit/react-ui";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardMain from "@/components/dashboard/DashboardMain";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { useDashboardAction } from "@/components/actions/useDashboardAction";
-import { SYSTEM_PROMPT } from "@/lib/prompts/system";
+import MonocleChat from "@/components/copilot/MonocleChat";
 
 const SIDEBAR_COLLAPSED_KEY = "monocle-sidebar-collapsed";
 const ASSISTANT_REST = "Ask me anything";
@@ -18,12 +16,11 @@ export default function CrmDashboard() {
   const [quickInputOpen, setQuickInputOpen] = useState(false);
   const [quickQuery, setQuickQuery] = useState("");
   const [botHover, setBotHover] = useState(false);
+  // When set, MonocleChat will fire this as an initial message on mount
+  const [pendingMessage, setPendingMessage] = useState<string | undefined>();
 
-  // Register the render_dashboard generative-UI action
+  // Register the render_dashboard generative-UI action (must be inside CopilotKit)
   useDashboardAction();
-
-  // Used only by the quick-input bar to programmatically send a message
-  const { sendMessage: sendCopilotMessage, isLoading } = useCopilotChatInternal();
 
   useEffect(() => {
     try {
@@ -47,19 +44,6 @@ export default function CrmDashboard() {
     });
   }, []);
 
-  const sendMessage = useCallback(
-    async (raw: string) => {
-      const text = raw.trim();
-      if (!text || isLoading) return;
-      await sendCopilotMessage({
-        id: `user-${Date.now()}`,
-        role: "user",
-        content: text,
-      });
-    },
-    [isLoading, sendCopilotMessage],
-  );
-
   return (
     <div className="flex h-screen overflow-hidden text-zinc-100">
       <DashboardSidebar
@@ -78,38 +62,33 @@ export default function CrmDashboard() {
       {/* ── AI Chat Panel ─────────────────────────────────────────────────── */}
       <aside
         className={`relative z-10 h-full shrink-0 border-l border-[color:var(--oa-border-green)] bg-zinc-950/90 backdrop-blur-md transition-all duration-300 ease-out ${
-          chatOpen ? "w-[560px]" : "w-0 border-l-0"
+          chatOpen ? "w-[420px]" : "w-0 border-l-0 overflow-hidden"
         }`}
         aria-hidden={!chatOpen}
       >
         {chatOpen && (
-          <div className="flex h-full min-h-0 flex-col translate-x-0 opacity-100 transition-all duration-300 ease-out">
-            <div className="min-h-0 flex-1 overflow-hidden p-4">
-              <div className="relative flex h-full min-h-0 flex-col rounded-2xl border border-emerald-500/25 bg-zinc-950 overflow-hidden">
-                {/* Close button */}
-                <button
-                  type="button"
-                  onClick={() => setChatOpen(false)}
-                  className="absolute right-3 top-3 z-20 rounded-full border border-white/[0.08] bg-zinc-900/90 p-2 text-zinc-500 transition hover:border-emerald-500/35 hover:text-zinc-200"
-                  aria-label="Close AI assistant"
-                >
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-
-                {/* CopilotChat — handles text messages + inline generative UI (dashboards) */}
-                <div className="monocle-copilot-chat">
-                  <CopilotChat
-                    instructions={SYSTEM_PROMPT}
-                    labels={{
-                      title: "Monocle",
-                      initial: "Ask me anything about your analytics — I'll query the data and build you a live dashboard.",
-                      placeholder: "Ask an analytics question...",
-                    }}
-                  />
-                </div>
+          <div className="flex h-full min-h-0 flex-col">
+            {/* ── Panel header ─────────────────────────────────────────────── */}
+            <div className="flex shrink-0 items-center justify-between border-b border-emerald-500/20 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" aria-hidden />
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">Monocle AI</span>
               </div>
+              <button
+                type="button"
+                onClick={() => setChatOpen(false)}
+                className="rounded-full border border-white/[0.08] bg-zinc-900/90 p-1.5 text-zinc-500 transition hover:border-emerald-500/35 hover:text-zinc-200"
+                aria-label="Close AI assistant"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* ── Custom chat UI (AG-UI / generative-UI enabled) ─────────────── */}
+            <div className="flex-1 min-h-0">
+              <MonocleChat initialMessage={pendingMessage} />
             </div>
           </div>
         )}
@@ -136,11 +115,9 @@ export default function CrmDashboard() {
                   if (!value) return;
                   setQuickQuery("");
                   setQuickInputOpen(false);
+                  // Pass the message to MonocleChat as an initialMessage
+                  setPendingMessage(value);
                   setChatOpen(true);
-                  // Small delay so CopilotChat mounts before the message lands
-                  setTimeout(() => {
-                    void sendMessage(value);
-                  }, 120);
                 }}
               >
                 <input

@@ -222,127 +222,197 @@ body {
   }
 }
 
-/* ─── CopilotKit dark theme override for Monocle ─────────────────────────── */
+/* ─── CopilotKit — no longer using CopilotChat; custom UI in MonocleChat ─── */
 
 .monocle-copilot-chat {
+  /* CopilotKit design tokens — applied here so they inherit down */
   --copilot-kit-primary-color: #34d399;
-  --copilot-kit-background-color: #09090b;
+  --copilot-kit-background-color: transparent;
+  --copilot-kit-input-background-color: rgba(24, 24, 27, 0.85);
   --copilot-kit-contrast-color: #09090b;
   --copilot-kit-secondary-contrast-color: #f4f4f5;
-  --copilot-kit-muted-color: #71717a;
+  --copilot-kit-muted-color: #52525b;
   --copilot-kit-separator-color: rgba(74, 222, 128, 0.18);
   --copilot-kit-scrollbar-color: rgba(63, 63, 70, 0.45);
-  --copilot-kit-response-button-color: #a1a1aa;
-  --copilot-kit-response-button-background-color: rgba(24, 24, 27, 0.85);
+  /* Layout */
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-/* Root container */
-.monocle-copilot-chat > div {
-  height: 100%;
-  background: transparent !important;
-}
-
-/* Chat window: fill container, remove default border/shadow */
-.monocle-copilot-chat .copilotkit-window {
-  height: 100% !important;
-  max-height: 100% !important;
-  border: none !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Header */
-.monocle-copilot-chat .copilotkit-header {
-  background: transparent !important;
-  border-bottom: 1px solid rgba(74, 222, 128, 0.18) !important;
-  padding: 0.65rem 1rem !important;
-  padding-right: 3rem !important; /* space for close button */
-}
-
-.monocle-copilot-chat .copilotkit-header h1,
-.monocle-copilot-chat .copilotkit-header span {
-  font-size: 0.8rem !important;
-  font-weight: 600 !important;
-  color: #a1a1aa !important;
-  letter-spacing: 0.04em !important;
-  text-transform: uppercase !important;
-}
-
-/* Messages area */
-.monocle-copilot-chat .copilotkit-messages-container {
+/* ── 1. Root chat div ─────────────────────────────────────────────────────── */
+.monocle-copilot-chat .copilotKitChat {
   flex: 1 !important;
   min-height: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
   background: transparent !important;
-  padding: 0.75rem !important;
 }
 
-/* Individual messages */
-.monocle-copilot-chat .copilotkit-message {
-  max-width: 90% !important;
+/* ── 2. Chat body: flex column holding messages + input ───────────────────── */
+.monocle-copilot-chat .copilotKitChatBody {
+  flex: 1 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background: transparent !important;
+  /* Do NOT add overflow here — copilotKitMessages handles its own scroll */
 }
 
-.monocle-copilot-chat .copilotkit-user-message {
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+/* ── 3. Messages scrollable area ──────────────────────────────────────────── */
+.monocle-copilot-chat .copilotKitMessages {
+  flex: 1 !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  /* Push messages to the bottom — like WhatsApp/Slack */
+  justify-content: flex-end !important;
+  background: transparent !important;
+  padding: 1rem 0.75rem 0.5rem !important;
+  gap: 0 !important;
+}
+
+/* ── 4. Inner message list container ─────────────────────────────────────── */
+.monocle-copilot-chat .copilotKitMessagesContainer {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* ── 5. Suggestions footer inside messages area ───────────────────────────── */
+.monocle-copilot-chat .copilotKitMessagesFooter {
+  background: transparent !important;
+  padding: 0.25rem 0 0 !important;
+}
+
+/* ── 6. Individual message bubbles ────────────────────────────────────────── */
+.monocle-copilot-chat .copilotKitMessage {
+  max-width: 88% !important;
+}
+
+.monocle-copilot-chat .copilotKitUserMessage {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: #f4f4f5 !important;
-  border-radius: 1rem !important;
+  border-radius: 1rem 1rem 0.25rem 1rem !important;
+  align-self: flex-end !important;
 }
 
-.monocle-copilot-chat .copilotkit-assistant-message {
+.monocle-copilot-chat .copilotKitAssistantMessage {
   background: rgba(52, 211, 153, 0.07) !important;
   border: 1px solid rgba(52, 211, 153, 0.18) !important;
   color: #f4f4f5 !important;
-  border-radius: 1rem !important;
+  border-radius: 1rem 1rem 1rem 0.25rem !important;
+  align-self: flex-start !important;
+  max-width: 100% !important;
+  width: auto !important;
 }
 
-/* Input area */
-.monocle-copilot-chat .copilotkit-input-container,
-.monocle-copilot-chat form[class*="input"] {
-  background: rgba(9, 9, 11, 0.92) !important;
-  border-top: 1px solid rgba(74, 222, 128, 0.18) !important;
-  padding: 0.6rem 0.75rem !important;
-}
-
-.monocle-copilot-chat textarea,
-.monocle-copilot-chat input[type="text"] {
+/* Generative UI / tool-render blocks: full width */
+.monocle-copilot-chat .copilotKitCustomAssistantMessage {
   background: transparent !important;
+  border: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 !important;
+}
+
+.monocle-copilot-chat .copilotKitCustomAssistantMessage > * {
+  width: 100% !important;
+}
+
+/* ── 7. Input container — pinned at the bottom ────────────────────────────── */
+.monocle-copilot-chat .copilotKitInputContainer {
+  flex-shrink: 0 !important;
+  background: rgba(9, 9, 11, 0.98) !important;
+  border-top: 1px solid rgba(74, 222, 128, 0.18) !important;
+  padding: 0.625rem 0.75rem 0.5rem !important;
+}
+
+/* ── 8. Input box (the visible styled box) ────────────────────────────────── */
+.monocle-copilot-chat .copilotKitInput {
+  background: rgba(24, 24, 27, 0.85) !important;
+  border: 1px solid rgba(63, 63, 70, 0.55) !important;
+  border-radius: 0.875rem !important;
+  /* Compact: override CopilotKit's default min-height: 75px */
+  min-height: 44px !important;
+  padding: 8px 12px !important;
+  transition: border-color 150ms ease !important;
+}
+
+.monocle-copilot-chat .copilotKitInput:focus-within {
+  border-color: rgba(52, 211, 153, 0.5) !important;
+}
+
+/* ── 9. Textarea (inside the input box) ───────────────────────────────────── */
+.monocle-copilot-chat .copilotKitInput > textarea {
   color: #f4f4f5 !important;
   caret-color: #34d399 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.5 !important;
 }
 
-.monocle-copilot-chat textarea::placeholder,
-.monocle-copilot-chat input[type="text"]::placeholder {
+.monocle-copilot-chat .copilotKitInput > textarea::placeholder {
   color: #52525b !important;
 }
 
-/* Send button */
-.monocle-copilot-chat button[type="submit"],
-.monocle-copilot-chat .copilotkit-send-button {
-  color: #34d399 !important;
+/* ── 10. Send / stop buttons ──────────────────────────────────────────────── */
+.monocle-copilot-chat .copilotKitInputControls {
   background: transparent !important;
 }
 
-.monocle-copilot-chat button[type="submit"]:hover,
-.monocle-copilot-chat .copilotkit-send-button:hover {
+.monocle-copilot-chat .copilotKitInputControlButton {
+  color: #34d399 !important;
+}
+
+.monocle-copilot-chat .copilotKitInputControlButton:hover {
   color: #6ee7b7 !important;
 }
 
-/* Stop button */
-.monocle-copilot-chat .copilotkit-stop-button {
-  color: #f87171 !important;
+/* ── 11. "Powered by CopilotKit" footer ────────────────────────────────────── */
+.monocle-copilot-chat .poweredByContainer,
+.monocle-copilot-chat .poweredBy {
+  background: transparent !important;
+  color: #3f3f46 !important;
+  border-top: none !important;
+  font-size: 0.6rem !important;
+  padding-bottom: 0 !important;
 }
 
-/* Tool call / action render blocks */
-.monocle-copilot-chat .copilotkit-action-render {
-  width: 100% !important;
-  max-width: 100% !important;
+/* ── 12. Suggestion chips ─────────────────────────────────────────────────── */
+.monocle-copilot-chat .suggestion {
+  background: rgba(52, 211, 153, 0.08) !important;
+  border: 1px solid rgba(52, 211, 153, 0.2) !important;
+  color: #6ee7b7 !important;
+  border-radius: 999px !important;
+}
+
+/* ── 13. Spinner / loading dots ───────────────────────────────────────────── */
+.monocle-copilot-chat .copilotKitSpinner,
+.monocle-copilot-chat .copilotKitActivityDot {
+  background: #34d399 !important;
+}
+
+/* ── 14. Scrollbar styling ─────────────────────────────────────────────────── */
+.monocle-copilot-chat .copilotKitMessages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.monocle-copilot-chat .copilotKitMessages::-webkit-scrollbar-thumb {
+  background-color: rgba(63, 63, 70, 0.5);
+  border-radius: 999px;
+}
+
+.monocle-copilot-chat .copilotKitMessages::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────── */

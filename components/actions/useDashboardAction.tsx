@@ -1,27 +1,21 @@
 "use client";
 
-import { useCopilotAction } from "@copilotkit/react-core";
+import { useRenderToolCall } from "@copilotkit/react-core";
 import { DashboardSchema } from "@/lib/schemas/dashboard";
-import type { Dashboard } from "@/lib/schemas/dashboard";
-import { useDashboardStore } from "@/store/dashboard";
 import DashboardRenderer from "@/components/DashboardRenderer";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 
+/**
+ * Registers the client-side render function for the `render_dashboard` tool.
+ *
+ * The tool itself is defined as a BACKEND action in /api/copilotkit/route.ts so the
+ * server-side AnthropicAdapter can resolve the tool call without a
+ * MissingToolResultsError.  useRenderToolCall wires up the React rendering
+ * (generative UI) without re-registering the tool as callable by the AI.
+ */
 export function useDashboardAction() {
-  const addDashboard = useDashboardStore((s) => s.addDashboard);
-
-  useCopilotAction({
+  useRenderToolCall({
     name: "render_dashboard",
-    description:
-      "Render an analytics dashboard from a JSON layout tree. Call this after gathering data with run_analytics_query.",
-    parameters: [
-      {
-        name: "dashboard",
-        type: "object" as const,
-        description: "The dashboard object with title, description, and layout tree.",
-        required: true,
-      },
-    ],
     render: ({ status, args }) => {
       if (status !== "complete") {
         return <DashboardSkeleton />;
@@ -37,29 +31,18 @@ export function useDashboardAction() {
       }
 
       return (
-        <div className="my-2 rounded-xl border border-zinc-700 bg-zinc-900/60 p-4">
+        <div className="my-2">
           {parsed.data.title && (
-            <h3 className="mb-1 text-lg font-semibold text-zinc-100">
+            <h3 className="mb-1 text-sm font-semibold text-zinc-100">
               {parsed.data.title}
             </h3>
           )}
           {parsed.data.description && (
-            <p className="mb-3 text-sm text-zinc-400">
-              {parsed.data.description}
-            </p>
+            <p className="mb-3 text-xs text-zinc-400">{parsed.data.description}</p>
           )}
           <DashboardRenderer node={parsed.data.layout} />
         </div>
       );
-    },
-    handler: async ({ dashboard }) => {
-      const parsed = DashboardSchema.safeParse(dashboard);
-      if (parsed.success) {
-        addDashboard(parsed.data as Dashboard);
-      }
-      return parsed.success
-        ? "Dashboard rendered successfully."
-        : `Dashboard parse error: ${parsed.error?.message}`;
     },
   });
 }

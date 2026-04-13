@@ -20,12 +20,11 @@ const METRICS: {
   accent: string;
 }[] = [
   { key: "users", label: "Users", hint: "Total users in the database", accent: "#4ade80" },
-  { key: "sessions", label: "Sessions", hint: "Total sessions recorded", accent: "#38bdf8" },
+  { key: "calls", label: "Calls", hint: "Total calls/sessions recorded", accent: "#38bdf8" },
   { key: "questions", label: "Questions", hint: "Total questions logged", accent: "#a78bfa" },
   { key: "errors", label: "Errors", hint: "Total error events", accent: "#fb923c" },
-  { key: "asrLogs", label: "ASR logs", navLabel: "ASR", hint: "Total speech transcripts", accent: "#fbbf24" },
-  { key: "ttsLogs", label: "TTS logs", navLabel: "TTS", hint: "Total text-to-speech lines", accent: "#2dd4bf" },
-  { key: "toolCalls", label: "Tool calls", hint: "Total tool invocations", accent: "#4ade80" },
+  { key: "asrDetails", label: "ASR", navLabel: "ASR", hint: "Total speech recognition events", accent: "#fbbf24" },
+  { key: "ttsDetails", label: "TTS", navLabel: "TTS", hint: "Total text-to-speech events", accent: "#2dd4bf" },
 ];
 
 /** Sidebar / anchor ids — keep in sync with `metric-*` elements below. */
@@ -150,8 +149,7 @@ export default function OverviewStats() {
         <div className="rounded-xl border border-red-500/25 bg-red-950/40 px-4 py-3 text-sm text-red-200">
           {error}
           <p className="mt-2 text-xs text-red-300/80">
-            Run Supabase migrations (including <code className="rounded bg-black/30 px-1">003_analytics_rls_and_indexes</code>) and
-            ensure you are signed in.
+            Ensure <code className="rounded bg-black/30 px-1">ANALYTICS_DATABASE_URL</code> is set and you are signed in.
           </p>
         </div>
       )}
