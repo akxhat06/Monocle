@@ -3,6 +3,9 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useCopilotChatInternal, useCopilotAdditionalInstructions } from "@copilotkit/react-core";
 import { SYSTEM_PROMPT } from "@/lib/prompts/system";
+import KpiCard from "@/components/widgets/KpiCard";
+import BarChartWidget from "@/components/widgets/BarChartWidget";
+import LineChartWidget from "@/components/widgets/LineChartWidget";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -145,39 +148,80 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
   // Cast messages to our local type (generativeUI is injected by useCopilotChatInternal)
   const chatMessages = messages as unknown as AnyMessage[];
 
-  // Filter to only user + assistant messages (skip system/tool/etc.)
-  const visible = chatMessages.filter(
-    (m) => m.role === "user" || m.role === "assistant",
-  );
+  // Only show user + assistant messages that have actual content to display.
+  // Filter out empty assistant placeholders (CopilotKit creates these at stream start).
+  const visible = chatMessages.filter((m) => {
+    if (m.role === "user") return Boolean(extractText(m.content).trim());
+    if (m.role === "assistant") {
+      const text = extractText(m.content).trim();
+      const hasGenUI = typeof m.generativeUI === "function";
+      return Boolean(text) || hasGenUI;
+    }
+    return false;
+  });
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* ── Message list ───────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3 scroll-smooth">
         {visible.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-3 text-center pb-8">
-            <div className="rounded-full border border-emerald-500/30 bg-emerald-500/10 p-4">
-              <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-              </svg>
+          <div className="flex flex-col gap-4 pb-4">
+            {/* Header */}
+            <div className="text-center pt-2">
+              <p className="text-xs font-semibold uppercase tracking-widest text-zinc-500">What I can build for you</p>
             </div>
-            <div>
-              <p className="text-sm font-semibold text-zinc-300">Ask me anything</p>
-              <p className="mt-1 text-xs text-zinc-500 max-w-[240px]">
-                I&apos;ll query your analytics data and build live dashboards.
-              </p>
+
+            {/* KPI preview */}
+            <div className="grid grid-cols-2 gap-2">
+              <KpiCard label="Total Users" value="49,574" delta="+8.3%" />
+              <KpiCard label="Total Calls" value="232,991" delta="+12.1%" />
             </div>
-            <div className="mt-2 flex flex-col gap-1.5 w-full max-w-[260px]">
+
+            {/* Bar chart preview */}
+            <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
+              <BarChartWidget
+                title="Questions by Channel"
+                data={[
+                  { channel: "Voice", questions: 1420000 },
+                  { channel: "Chat", questions: 305696 },
+                ]}
+                xKey="channel"
+                yKeys={["questions"]}
+              />
+            </div>
+
+            {/* Line chart preview */}
+            <div className="rounded-xl border border-zinc-700/50 bg-zinc-900/40 overflow-hidden">
+              <LineChartWidget
+                title="Calls Over Time (sample)"
+                data={[
+                  { day: "Mon", calls: 820 },
+                  { day: "Tue", calls: 950 },
+                  { day: "Wed", calls: 1100 },
+                  { day: "Thu", calls: 870 },
+                  { day: "Fri", calls: 1230 },
+                  { day: "Sat", calls: 650 },
+                  { day: "Sun", calls: 480 },
+                ]}
+                xKey="day"
+                yKeys={["calls"]}
+              />
+            </div>
+
+            {/* Quick prompts */}
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[10px] uppercase tracking-widest text-zinc-600 px-0.5">Try asking</p>
               {[
                 "Give me a platform overview",
                 "How are calls trending this month?",
                 "What are the most common errors?",
+                "Show ASR latency over time",
               ].map((q) => (
                 <button
                   key={q}
                   type="button"
                   onClick={() => void submit(q)}
-                  className="w-full rounded-xl border border-zinc-700/60 bg-zinc-900/60 px-3 py-2 text-left text-xs text-zinc-400 transition hover:border-emerald-500/40 hover:text-zinc-200"
+                  className="w-full rounded-lg border border-zinc-700/60 bg-zinc-900/50 px-3 py-2 text-left text-xs text-zinc-400 transition hover:border-emerald-500/40 hover:text-zinc-200"
                 >
                   {q}
                 </button>
@@ -199,11 +243,11 @@ export default function MonocleChat({ initialMessage }: MonocleChatProps) {
 
           if (msg.role === "assistant") {
             const genUI = msg.generativeUI;
-            const text = extractText(msg.content);
+            const text = extractText(msg.content).trim();
             const hasGenUI = typeof genUI === "function";
             const hasText = Boolean(text);
 
-            // Skip empty messages (e.g. tool-call-only messages with no text)
+            // Skip empty messages (already filtered above, but belt-and-suspenders)
             if (!hasGenUI && !hasText) return null;
 
             return (
