@@ -1,4 +1,5 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import db from "@/lib/db/postgres";
+import { toJsonSafeDeep } from "@/lib/data/json-safe";
 
 const BLOCKED = ["insert", "update", "delete", "drop", "alter", "truncate", "grant", "create", ";"];
 
@@ -30,20 +31,19 @@ export async function runAnalyticsQuery({ sql }: { sql: string }) {
   }
 
   const finalSql = addLimit(cleaned);
-  const supabase = createServerSupabaseClient();
 
-  const { data, error } = await supabase.rpc("run_safe_query", { query_sql: finalSql });
+  try {
+    // postgres.js returns typed rows; cast to generic records for the LLM
+    const rows = await db.unsafe(finalSql) as Record<string, unknown>[];
+    const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
 
-  if (error) {
-    return { error: error.message };
+    return toJsonSafeDeep({
+      rows,
+      rowCount: rows.length,
+      columns,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { error: message };
   }
-
-  const rows = Array.isArray(data) ? data : [];
-  const columns = rows.length > 0 ? Object.keys(rows[0] as Record<string, unknown>) : [];
-
-  return {
-    rows,
-    rowCount: rows.length,
-    columns
-  };
 }
