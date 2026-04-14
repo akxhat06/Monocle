@@ -98,138 +98,116 @@ body {
   }
 }
 
-/* MonocleMarkAnimated — one lens, many views */
+/* ── MonocleMarkAnimated v2 — "Data Pulse" ───────────────────────────────── */
 .monocle-mark-svg {
   overflow: visible;
 }
 
-.monocle-mark-svg .mm-orbit {
+/* Outer ring — slow clockwise spin */
+.monocle-mark-svg .mm2-ring1 {
   transform-origin: 80px 80px;
-  animation: mm-orbit-spin 22s linear infinite;
+  animation: mm2-spin-cw 20s linear infinite;
 }
 
-@keyframes mm-orbit-spin {
-  to {
-    transform: rotate(360deg);
-  }
+/* Inner ring — faster counter-clockwise */
+.monocle-mark-svg .mm2-ring2 {
+  transform-origin: 80px 80px;
+  animation: mm2-spin-ccw 12s linear infinite;
 }
 
-.monocle-mark-svg .mm-view-a {
-  animation: mm-view-pulse 3s ease-in-out infinite;
+@keyframes mm2-spin-cw  { to { transform: rotate(360deg);  } }
+@keyframes mm2-spin-ccw { to { transform: rotate(-360deg); } }
+
+/* Hex outline — slow breathe */
+.monocle-mark-svg .mm2-hex {
+  animation: mm2-hex-breathe 4s ease-in-out infinite;
+}
+@keyframes mm2-hex-breathe {
+  0%, 100% { opacity: 0.85; transform: scale(1);     }
+  50%       { opacity: 1;    transform: scale(1.025); }
 }
 
-.monocle-mark-svg .mm-view-b {
-  animation: mm-view-pulse 3s ease-in-out infinite 0.45s;
+/* Node pulse rings */
+.monocle-mark-svg .mm2-node-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mm2-node-ring-pulse 2.4s ease-out infinite;
+}
+@keyframes mm2-node-ring-pulse {
+  0%   { transform: scale(1);   opacity: 0.45; }
+  60%  { transform: scale(2.2); opacity: 0;    }
+  100% { transform: scale(2.2); opacity: 0;    }
 }
 
-.monocle-mark-svg .mm-view-c {
-  animation: mm-view-pulse 3s ease-in-out infinite 0.9s;
+/* Sparkline — draw and redraw */
+.monocle-mark-svg .mm2-spark {
+  stroke-dasharray: 120;
+  stroke-dashoffset: 120;
+  animation: mm2-spark-draw 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@keyframes mm2-spark-draw {
+  0%   { stroke-dashoffset: 120; opacity: 0.2; }
+  40%  { stroke-dashoffset: 0;   opacity: 1;   }
+  75%  { stroke-dashoffset: 0;   opacity: 0.9; }
+  100% { stroke-dashoffset: -120; opacity: 0;  }
 }
 
-@keyframes mm-view-pulse {
-  0%, 100% {
-    opacity: 0.72;
-  }
-
-  50% {
-    opacity: 1;
-  }
+/* Core dot pulse */
+.monocle-mark-svg .mm2-core {
+  animation: mm2-core-pulse 2.2s ease-in-out infinite;
+}
+@keyframes mm2-core-pulse {
+  0%, 100% { opacity: 1;    transform: scale(1);    }
+  50%       { opacity: 0.7; transform: scale(0.92); }
 }
 
-.monocle-mark-svg .mm-bar {
+/* Ripple outward from core */
+.monocle-mark-svg .mm2-ripple {
+  transform-origin: 80px 80px;
+  animation: mm2-ripple 2.8s ease-out infinite;
+}
+@keyframes mm2-ripple {
+  0%   { transform: scale(1);   stroke-opacity: 0.5; }
+  70%  { transform: scale(2.8); stroke-opacity: 0;   }
+  100% { transform: scale(2.8); stroke-opacity: 0;   }
+}
+
+/* Bars — breathe up/down with stagger (delay set inline) */
+.monocle-mark-svg .mm2-bar {
   transform-origin: center bottom;
   transform-box: fill-box;
-  animation: mm-bar-bounce 1.5s ease-in-out infinite;
+  animation: mm2-bar-breathe 1.8s ease-in-out infinite;
+}
+@keyframes mm2-bar-breathe {
+  0%, 100% { transform: scaleY(1);    opacity: 0.85; }
+  50%       { transform: scaleY(0.45); opacity: 0.55; }
 }
 
-.monocle-mark-svg .mm-view-a .mm-bar:nth-child(2) { animation-delay: 0s; }
-.monocle-mark-svg .mm-view-a .mm-bar:nth-child(3) { animation-delay: 0.1s; }
-.monocle-mark-svg .mm-view-a .mm-bar:nth-child(4) { animation-delay: 0.2s; }
-
-.monocle-mark-svg .mm-view-b .mm-bar:nth-child(2) { animation-delay: 0.15s; }
-.monocle-mark-svg .mm-view-b .mm-bar:nth-child(3) { animation-delay: 0.25s; }
-.monocle-mark-svg .mm-view-b .mm-bar:nth-child(4) { animation-delay: 0.35s; }
-
-.monocle-mark-svg .mm-view-c .mm-bar:nth-child(2) { animation-delay: 0.3s; }
-.monocle-mark-svg .mm-view-c .mm-bar:nth-child(3) { animation-delay: 0.4s; }
-.monocle-mark-svg .mm-view-c .mm-bar:nth-child(4) { animation-delay: 0.5s; }
-
-@keyframes mm-bar-bounce {
-  0%, 100% {
-    transform: scaleY(1);
-  }
-
-  50% {
-    transform: scaleY(0.5);
-  }
+/* Bar section fade */
+.monocle-mark-svg .mm2-bars {
+  animation: mm2-bars-fade 4s ease-in-out infinite 0.5s;
+}
+@keyframes mm2-bars-fade {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 1;    }
 }
 
-.monocle-mark-svg .mm-lens {
-  animation: mm-lens-soft 3.2s ease-in-out infinite;
-}
-
-@keyframes mm-lens-soft {
-  0%, 100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.88;
-  }
-}
-
-.monocle-mark-svg .mm-lens-core {
-  animation: mm-core-pulse 2.2s ease-in-out infinite;
-}
-
-@keyframes mm-core-pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.55;
-  }
-}
-
-.monocle-mark-svg .mm-spark {
-  stroke-dasharray: 56;
-  stroke-dashoffset: 56;
-  animation: mm-spark-draw 2.8s ease-in-out infinite;
-}
-
-@keyframes mm-spark-draw {
-  0% {
-    stroke-dashoffset: 56;
-    opacity: 0.3;
-  }
-
-  35% {
-    stroke-dashoffset: 0;
-    opacity: 0.55;
-  }
-
-  100% {
-    stroke-dashoffset: 0;
-    opacity: 0.3;
-  }
-}
-
+/* ── Reduced motion ───────────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
-  .monocle-mark-svg .mm-orbit,
-  .monocle-mark-svg .mm-view-a,
-  .monocle-mark-svg .mm-view-b,
-  .monocle-mark-svg .mm-view-c,
-  .monocle-mark-svg .mm-bar,
-  .monocle-mark-svg .mm-lens,
-  .monocle-mark-svg .mm-lens-core,
-  .monocle-mark-svg .mm-spark {
+  .monocle-mark-svg .mm2-ring1,
+  .monocle-mark-svg .mm2-ring2,
+  .monocle-mark-svg .mm2-hex,
+  .monocle-mark-svg .mm2-node-ring,
+  .monocle-mark-svg .mm2-spark,
+  .monocle-mark-svg .mm2-core,
+  .monocle-mark-svg .mm2-ripple,
+  .monocle-mark-svg .mm2-bar,
+  .monocle-mark-svg .mm2-bars {
     animation: none !important;
   }
-
-  .monocle-mark-svg .mm-spark {
+  .monocle-mark-svg .mm2-spark {
     stroke-dashoffset: 0 !important;
-    opacity: 0.45 !important;
+    opacity: 0.8 !important;
   }
 }
 
