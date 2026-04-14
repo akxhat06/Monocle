@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { getSupabaseAnonKey, getSupabaseUrl } from "./env";
+import type { User } from "@supabase/supabase-js";
 
-export async function updateSession(request: NextRequest) {
+export async function updateSession(
+  request: NextRequest,
+): Promise<{ response: NextResponse; user: User | null }> {
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(getSupabaseUrl(), getSupabaseAnonKey(), {
@@ -19,10 +22,11 @@ export async function updateSession(request: NextRequest) {
         request.cookies.set({ name, value: "", ...options });
         response = NextResponse.next({ request });
         response.cookies.set({ name, value: "", ...options });
-      }
-    }
+      },
+    },
   });
 
-  await supabase.auth.getUser();
-  return response;
+  // Single getUser() — result shared with caller so middleware never calls it twice
+  const { data: { user } } = await supabase.auth.getUser();
+  return { response, user };
 }

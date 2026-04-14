@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+
 import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import MonocleMarkAnimated from "@/components/brand/MonocleMarkAnimated";
 import { PRODUCT_NAME, PRODUCT_TAGLINE, PRODUCT_VALUE_PROP } from "@/lib/brand";
@@ -34,7 +34,7 @@ const fontMono = JetBrains_Mono({
 });
 
 export default function LoginPage() {
-  const router = useRouter();
+
   const [mode, setMode] = useState<"login" | "signup">("login");
 
   useEffect(() => {
@@ -181,9 +181,9 @@ export default function LoginPage() {
       return;
     }
     setLoading(false);
-    showToast("Welcome back!");
-    router.replace("/");
-    router.refresh();
+    // Hard navigation — avoids the router.replace + router.refresh double-render
+    // cycle. Session cookie is already set by Supabase; middleware will pass through.
+    window.location.href = "/";
   }
 
   async function onSignup(e: React.FormEvent<HTMLFormElement>) {
@@ -204,9 +204,7 @@ export default function LoginPage() {
       return;
     }
     setLoading(false);
-    showToast("Account created! Taking you in…");
-    router.replace("/");
-    router.refresh();
+    window.location.href = "/";
   }
 
   function switchMode(target: "login" | "signup") {
