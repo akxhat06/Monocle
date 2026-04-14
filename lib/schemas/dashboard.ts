@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+// ── TypeScript types ──────────────────────────────────────────────────────────
+
 export type KpiWidget = {
   type: "kpi";
   label: string;
@@ -56,72 +58,105 @@ export type Dashboard = {
   layout: LayoutNode;
 };
 
-const KpiWidgetSchema = z.object({
-  type: z.literal("kpi"),
-  label: z.string(),
-  value: z.string(),
-  delta: z.string().optional()
-});
+// ── Zod schemas — lenient input, normalized output ───────────────────────────
+// The AI sometimes deviates from the spec. These schemas are tolerant of
+// common variants and transform them into the canonical shape before rendering.
+
+// KPI: accept title OR label, value as string OR number, suffix appended
+const KpiWidgetSchema = z
+  .object({
+    type: z.literal("kpi"),
+    label: z.string().optional(),
+    title: z.string().optional(),               // AI sometimes uses "title"
+    value: z.union([z.string(), z.number()]),
+    suffix: z.string().optional(),              // AI sometimes appends a unit
+    delta: z.string().optional(),
+  })
+  .transform((d): KpiWidget => ({
+    type: "kpi",
+    label: d.label ?? d.title ?? "Metric",
+    value: d.suffix
+      ? `${d.value} ${d.suffix}`
+      : String(d.value),
+    delta: d.delta,
+  }));
 
 const MarkdownWidgetSchema = z.object({
   type: z.literal("markdown"),
-  content: z.string()
+  content: z.string(),
 });
 
 const TableWidgetSchema = z.object({
   type: z.literal("table"),
   title: z.string().optional(),
   columns: z.array(z.string()),
-  rows: z.array(z.record(z.string(), z.unknown()))
+  rows: z.array(z.record(z.string(), z.unknown())),
 });
 
-const BarWidgetSchema = z.object({
-  type: z.literal("bar"),
+// Shared chart fields
+const chartFields = {
   title: z.string().optional(),
   data: z.array(z.record(z.string(), z.unknown())),
   xKey: z.string(),
-  yKeys: z.array(z.string())
-});
+  yKeys: z.array(z.string()),
+};
 
-const LineWidgetSchema = z.object({
-  type: z.literal("line"),
-  title: z.string().optional(),
-  data: z.array(z.record(z.string(), z.unknown())),
-  xKey: z.string(),
-  yKeys: z.array(z.string())
-});
+const BarWidgetSchema = z.object({ type: z.literal("bar"), ...chartFields });
+const LineWidgetSchema = z.object({ type: z.literal("line"), ...chartFields });
+const AreaWidgetSchema = z.object({ type: z.literal("area"), ...chartFields });
 
-const AreaWidgetSchema = z.object({
-  type: z.literal("area"),
-  title: z.string().optional(),
-  data: z.array(z.record(z.string(), z.unknown())),
-  xKey: z.string(),
-  yKeys: z.array(z.string())
-});
+// "chart" with a "chartType" field — the AI sometimes emits this instead of
+// using the type directly ("type": "chart", "chartType": "line")
+const ChartAliasSchema = z
+  .object({
+    type: z.literal("chart"),
+    chartType: z.enum(["line", "bar", "area"]),
+    title: z.string().optional(),
+    data: z.array(z.record(z.string(), z.unknown())),
+    xKey: z.string(),
+    yKeys: z.array(z.string()),
+  })
+  .transform((d) => ({
+    type: d.chartType,
+    title: d.title,
+    data: d.data,
+    xKey: d.xKey,
+    yKeys: d.yKeys,
+  }));
 
-const WidgetSchema = z.discriminatedUnion("type", [KpiWidgetSchema, MarkdownWidgetSchema, TableWidgetSchema, BarWidgetSchema, LineWidgetSchema, AreaWidgetSchema]);
+// The full widget union, including the "chart" alias
+const WidgetSchema = z.union([
+  KpiWidgetSchema,
+  MarkdownWidgetSchema,
+  TableWidgetSchema,
+  BarWidgetSchema,
+  LineWidgetSchema,
+  AreaWidgetSchema,
+  ChartAliasSchema,
+]);
 
+// Recursive layout nodes
 const LayoutNodeSchema: z.ZodTypeAny = z.lazy(() =>
   z.union([
     WidgetSchema,
     z.object({
       type: z.literal("row"),
-      children: z.array(LayoutNodeSchema)
+      children: z.array(LayoutNodeSchema),
     }),
     z.object({
       type: z.literal("col"),
-      children: z.array(LayoutNodeSchema)
+      children: z.array(LayoutNodeSchema),
     }),
     z.object({
       type: z.literal("grid"),
       columns: z.number().int().min(1).max(12),
-      children: z.array(LayoutNodeSchema)
-    })
+      children: z.array(LayoutNodeSchema),
+    }),
   ])
 );
 
 export const DashboardSchema = z.object({
   title: z.string().optional(),
   description: z.string().optional(),
-  layout: LayoutNodeSchema
+  layout: LayoutNodeSchema,
 });

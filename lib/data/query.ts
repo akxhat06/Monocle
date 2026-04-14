@@ -1,17 +1,18 @@
 import db from "@/lib/db/postgres";
 import { toJsonSafeDeep } from "@/lib/data/json-safe";
 
-const BLOCKED = ["insert", "update", "delete", "drop", "alter", "truncate", "grant", "create", ";"];
+// Word-boundary blocked DML/DDL keywords — never appear as standalone words in read-only SQL
+const BLOCKED_WORDS = /\b(insert|update|delete|drop|alter|truncate|grant|create)\b/i;
 
 function normalizeSql(sql: string) {
-  return sql.replace(/\s+/g, " ").trim();
+  // Collapse whitespace, strip trailing semicolons (LLMs often append them)
+  return sql.replace(/\s+/g, " ").replace(/;+\s*$/, "").trim();
 }
 
 function isReadOnly(sql: string) {
-  const s = sql.toLowerCase();
-  const startsValid = s.startsWith("select") || s.startsWith("with");
-  if (!startsValid) return false;
-  return !BLOCKED.some((t) => s.includes(t));
+  const s = sql.toLowerCase().trimStart();
+  if (!s.startsWith("select") && !s.startsWith("with")) return false;
+  return !BLOCKED_WORDS.test(sql);
 }
 
 function addLimit(sql: string, limit = 5000) {

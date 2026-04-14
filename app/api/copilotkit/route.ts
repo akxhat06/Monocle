@@ -1,146 +1,159 @@
 import {
   CopilotRuntime,
   copilotRuntimeNextJSAppRouterEndpoint,
-  type CopilotServiceAdapter,
-  type CopilotRuntimeChatCompletionRequest,
+  EmptyAdapter,
 } from "@copilotkit/runtime";
+// BuiltInAgent and defineTool live in the v2 subpath (in package.json exports map)
+import { BuiltInAgent, defineTool } from "@copilotkit/runtime/v2";
+import { z } from "zod";
 import { getServiceAdapter } from "@/lib/llm";
 import { runAnalyticsQuery } from "@/lib/data/query";
-import { SCHEMA_DESCRIPTION } from "@/lib/prompts/system";
+import { SCHEMA_DESCRIPTION, SYSTEM_PROMPT } from "@/lib/prompts/system";
 
-type GuardedProcess = (req: CopilotRuntimeChatCompletionRequest) => Promise<{ threadId: string }>;
+// ── Tool definitions ──────────────────────────────────────────────────────────
+// Tools are defined directly on BuiltInAgent so `execute` is actually called.
+// The CopilotRuntime `actions` path wires tools as `execute: () => Promise.resolve()`
+// (empty stub), meaning tool results are always null — that's why we bypass it.
 
-/**
- * Patch the adapter's process() method IN-PLACE so every call path
- * (including CopilotKit-internal retries and suggestion runs) goes through
- * the guard — not just the one we return from the factory.
- *
- * The { ...base, process: fn } spread approach only creates a new object;
- * CopilotKit's runtime can still hold a reference to base.process directly
- * and call it without going through our wrapper, causing InvalidPromptError
- * when probe/init requests with empty messages reach the AI SDK.
- */
-function guardedAdapter(base: CopilotServiceAdapter): CopilotServiceAdapter {
-  const originalProcess: GuardedProcess = base.process.bind(base);
-
-  const completeStream = async (req: CopilotRuntimeChatCompletionRequest) => {
-    try {
-      await req.eventSource.stream(async (es) => {
-        // RuntimeEventSubject extends ReplaySubject — complete() closes the stream
-        (es as unknown as { complete(): void }).complete();
-      });
-    } catch {
-      /* ignore stream errors */
-    }
-  };
-
-  const guarded: GuardedProcess = async (req) => {
-    // Only call the AI when there is a real, non-empty user message.
-    // Probe/init requests have no user messages (or empty content).
-    //
-    // NOTE: do NOT check msg.type === "TextMessage" here.
-    // AG-UI format messages have NO type field — checking it would incorrectly
-    // classify real user messages as probes and silently swallow them.
-    type MaybeMsg = { role?: string; content?: unknown };
-    const hasRealUserMsg = req.messages.some((m) => {
-      const msg = m as MaybeMsg;
-      if (msg.role !== "user") return false;
-      // content can be a string or content-part array
-      const text =
-        typeof msg.content === "string"
-          ? msg.content
-          : Array.isArray(msg.content)
-            ? (msg.content as Array<{ text?: string }>)
-                .map((p) => p.text ?? "")
-                .join("")
-            : "";
-      return Boolean(text.trim());
-    });
-
-    if (!hasRealUserMsg) {
-      await completeStream(req);
-      return { threadId: req.threadId ?? "" };
-    }
-
-    try {
-      return await originalProcess(req);
-    } catch (err: unknown) {
-      const name = (err as { name?: string } | null)?.name ?? "";
-      if (name === "AI_InvalidPromptError" || name === "InvalidPromptError") {
-        await completeStream(req);
-        return { threadId: req.threadId ?? "" };
-      }
-      throw err;
-    }
-  };
-
-  // Patch in-place: this replaces process() on the instance so any internal
-  // CopilotKit call that reaches base.process also hits our guard.
-  (base as unknown as { process: GuardedProcess }).process = guarded;
-
-  return base;
-}
-
-const runtime = new CopilotRuntime({
-  actions: [
-    // ── Backend tool: query analytics data ──────────────────────────────────
-    {
-      name: "run_analytics_query",
-      description: `Execute a read-only SQL query against the user's analytics database. Available schema:\n${SCHEMA_DESCRIPTION}`,
-      parameters: [
-        {
-          name: "sql",
-          type: "string" as const,
-          description:
-            "A read-only SELECT or WITH SQL query. Do not include INSERT, UPDATE, DELETE, or DDL statements.",
-          required: true,
-        },
-        {
-          name: "purpose",
-          type: "string" as const,
-          description: "A brief description of what this query is trying to answer.",
-          required: true,
-        },
-      ],
-      handler: async ({ sql }: { sql: string; purpose: string }) => {
-        const result = await runAnalyticsQuery({ sql });
-        return result;
-      },
-    },
-
-    // ── Backend tool: render a dashboard ────────────────────────────────────
-    // Defined server-side so the AnthropicAdapter can resolve the tool call
-    // within its streaming loop (no MissingToolResultsError).
-    // The actual React rendering is handled client-side by useRenderToolCall
-    // in useDashboardAction.tsx via useLazyToolRenderer in useCopilotChatInternal.
-    {
-      name: "render_dashboard",
-      description:
-        "Render an analytics dashboard from a JSON layout tree. Call this AFTER gathering all required data with run_analytics_query. The frontend will display the dashboard inline in the chat.",
-      parameters: [
-        {
-          name: "dashboard",
-          type: "object" as const,
-          description:
-            "Dashboard spec: { title?: string, description?: string, layout: LayoutNode }. See the system prompt for the full schema.",
-          required: true,
-        },
-      ],
-      handler: async (_args: { dashboard: unknown }) => {
-        // The frontend's useRenderToolCall render() is what actually displays
-        // this. The backend handler just needs to return so the AI can continue.
-        return "Dashboard rendered on client.";
-      },
-    },
-  ],
+const runAnalyticsQueryTool = defineTool({
+  name: "run_analytics_query",
+  description: `Execute a read-only SQL query against the user's analytics database. Available schema:\n${SCHEMA_DESCRIPTION}`,
+  parameters: z.object({
+    sql: z.string().describe(
+      "A read-only SELECT or WITH SQL query. Do not include INSERT, UPDATE, DELETE, or DDL statements.",
+    ),
+    purpose: z.string().describe(
+      "A brief description of what this query is trying to answer.",
+    ),
+  }),
+  execute: async ({ sql }) => {
+    return await runAnalyticsQuery({ sql });
+  },
 });
 
-export const POST = async (req: Request) => {
-  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
-    runtime,
-    serviceAdapter: guardedAdapter(getServiceAdapter()),
-    endpoint: "/api/copilotkit",
+const renderDashboardTool = defineTool({
+  name: "render_dashboard",
+  description:
+    "Render an analytics dashboard from a JSON layout tree. Call this AFTER gathering all required data with run_analytics_query.",
+  parameters: z.object({
+    dashboard: z
+      .record(z.unknown())
+      .describe("Dashboard spec: { title?, description?, layout: LayoutNode }."),
+  }),
+  execute: async (_args) => {
+    // Rendering happens client-side via useRenderToolCall; server just acknowledges
+    return "Dashboard rendered on client.";
+  },
+});
+
+// ── Runtime singleton ─────────────────────────────────────────────────────────
+// maxSteps > 1 is required for the agentic loop:
+//   step 1 → run_analytics_query (fetch data, possibly parallel)
+//   step 2 → render_dashboard (build layout JSON from results)
+//   step 3 → final one-sentence assistant text
+// The default maxSteps=1 ends the run after step 1, so render_dashboard is never called.
+function buildRuntime() {
+  const serviceAdapter = getServiceAdapter();
+  const model = serviceAdapter.getLanguageModel();
+
+  const agent = new BuiltInAgent({
+    model,
+    maxSteps: 10,
+    prompt: SYSTEM_PROMPT,
+    tools: [runAnalyticsQueryTool, renderDashboardTool],
   });
 
-  return handleRequest(req);
+  return new CopilotRuntime({
+    agents: { default: agent },
+  });
+}
+
+// Singleton — built once per server process
+const runtime = buildRuntime();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function makeEndpoint() {
+  return copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    // serviceAdapter is optional when agents are provided directly;
+    // EmptyAdapter satisfies the type without creating a conflicting BuiltInAgent
+    serviceAdapter: new EmptyAdapter(),
+    endpoint: "/api/copilotkit",
+  });
+}
+
+type AgUiMessage = { role?: string; content?: string | unknown[] };
+
+function hasRealUserMessage(messages: AgUiMessage[]): boolean {
+  return messages.some((m) => {
+    if (String(m.role ?? "").toLowerCase() !== "user") return false;
+    const text =
+      typeof m.content === "string"
+        ? m.content
+        : Array.isArray(m.content)
+          ? (m.content as Array<{ text?: string }>).map((p) => p.text ?? "").join("")
+          : "";
+    return Boolean(text.trim());
+  });
+}
+
+// ── POST — all CopilotKit requests (runs, info, connect) ─────────────────────
+export const POST = async (req: Request) => {
+  let bodyText = "";
+  try { bodyText = await req.text(); } catch { /* ignore */ }
+
+  // The AG-UI body format is:
+  //   { method: "agent/run", params: { agentId: "..." }, body: { messages: [...], ... } }
+  // Messages live under body.body.messages — NOT body.messages.
+  type OuterBody = {
+    method?: string;
+    params?: { agentId?: string };
+    body?: { messages?: AgUiMessage[]; threadId?: string; runId?: string; [k: string]: unknown };
+  };
+
+  let outer: OuterBody = {};
+  try { outer = JSON.parse(bodyText) as OuterBody; } catch { /* fall through */ }
+
+  const innerBody = outer.body ?? {};
+  const messages: AgUiMessage[] = innerBody.messages ?? [];
+  const method = outer.method ?? "";
+
+  // "info" requests fetch runtime metadata (tools, version) — always forward
+  const isInfoRequest = method === "info";
+  // "agent/connect" and empty-message runs are probes
+  const isProbe = !isInfoRequest && (method === "agent/connect" || !hasRealUserMessage(messages));
+
+  console.log(
+    `[copilotkit] POST method="${method}" msgs=${messages.length} probe=${isProbe}`,
+    messages.slice(0, 2).map((m) => `role=${m.role} "${String(m.content ?? "").slice(0, 60)}"`),
+  );
+
+  if (isProbe) {
+    const threadId = innerBody.threadId ?? "";
+    const runId   = innerBody.runId   ?? "";
+
+    console.log("[copilotkit] >>> PROBE — returning RUN_FINISHED");
+
+    const sse = [
+      `data: ${JSON.stringify({ type: "RUN_STARTED",  threadId, runId, input: innerBody })}\n\n`,
+      `data: ${JSON.stringify({ type: "RUN_FINISHED", threadId, runId })}\n\n`,
+    ].join("");
+
+    return new Response(sse, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  }
+
+  console.log("[copilotkit] >>> REAL MESSAGE — forwarding to AI");
+
+  const { handleRequest } = makeEndpoint();
+  return handleRequest(
+    new Request(req.url, { method: "POST", headers: req.headers, body: bodyText }),
+  );
 };

@@ -6,15 +6,12 @@ import DashboardMain from "@/components/dashboard/DashboardMain";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
 import { useDashboardAction } from "@/components/actions/useDashboardAction";
 import MonocleChat from "@/components/copilot/MonocleChat";
-import ChatPreviewPanel from "@/components/copilot/ChatPreviewPanel";
 
 const SIDEBAR_COLLAPSED_KEY = "monocle-sidebar-collapsed";
 
 export default function CrmDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState<string | undefined>();
   const [botHover, setBotHover] = useState(false);
 
   // Register the render_dashboard generative-UI action (must be inside CopilotKit)
@@ -32,13 +29,6 @@ export default function CrmDashboard() {
       try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0"); } catch { /* ignore */ }
       return next;
     });
-  }, []);
-
-  // Called when user submits a query from the preview panel
-  const handlePreviewSubmit = useCallback((query: string) => {
-    setPreviewOpen(false);
-    setPendingMessage(query);
-    setChatOpen(true);
   }, []);
 
   return (
@@ -85,35 +75,19 @@ export default function CrmDashboard() {
 
             {/* Chat UI */}
             <div className="flex-1 min-h-0">
-              <MonocleChat
-                initialMessage={pendingMessage}
-                onReady={() => setPendingMessage(undefined)}
-              />
+              <MonocleChat />
             </div>
           </div>
         )}
       </aside>
 
-      {/* ── Preview panel (blurred backdrop + AGUI preview) ──────────────── */}
-      {!chatOpen && previewOpen && (
-        <ChatPreviewPanel
-          onClose={() => setPreviewOpen(false)}
-          onSubmit={handlePreviewSubmit}
-        />
-      )}
-
       {/* ── Floating bot button ────────────────────────────────────────────── */}
       {!chatOpen && (
-        <div
-          className={`pointer-events-none fixed bottom-9 right-9 z-50 transition-opacity duration-150 ${
-            previewOpen ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
-          aria-hidden={previewOpen}
-        >
+        <div className="pointer-events-none fixed bottom-9 right-9 z-50">
           <button
             type="button"
             className="pointer-events-auto relative flex cursor-pointer flex-col items-center border-0 bg-transparent p-0 transition hover:scale-[1.02]"
-            onClick={() => setPreviewOpen(true)}
+            onClick={() => setChatOpen(true)}
             onMouseEnter={() => setBotHover(true)}
             onMouseLeave={() => setBotHover(false)}
             aria-label="Open AI assistant"

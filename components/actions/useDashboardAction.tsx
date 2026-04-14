@@ -23,9 +23,13 @@ export function useDashboardAction() {
 
       const parsed = DashboardSchema.safeParse(args.dashboard);
       if (!parsed.success) {
+        // Log the full error + raw args so we can debug schema mismatches
+        console.error("[useDashboardAction] Schema parse failed:", parsed.error.format());
+        console.error("[useDashboardAction] Raw args.dashboard:", JSON.stringify(args.dashboard, null, 2));
         return (
-          <div className="rounded-lg border border-red-800 bg-red-950/50 p-4 text-sm text-red-300">
-            Failed to parse dashboard: {parsed.error.message}
+          <div className="rounded-lg border border-amber-800/60 bg-amber-950/30 p-3 text-xs text-amber-300/80">
+            <p className="font-semibold mb-1">Dashboard schema mismatch</p>
+            <pre className="whitespace-pre-wrap opacity-70 text-[10px]">{parsed.error.issues.map(i => `${i.path.join(".")}: ${i.message}`).join("\n")}</pre>
           </div>
         );
       }
