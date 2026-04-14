@@ -79,9 +79,9 @@ export default function DashboardHeader() {
   }, [ready, user]);
 
   return (
-    <header className="flex h-[72px] shrink-0 items-center gap-4 border-b border-[color:var(--oa-border-green)] bg-zinc-950/35 px-5 backdrop-blur-xl">
+    <header className="flex h-[64px] shrink-0 items-center gap-4 border-b border-white/[0.06] bg-[#141414]/80 px-5 backdrop-blur-xl">
       <div className="flex min-w-0 flex-1 items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-600 to-emerald-900 text-sm font-bold text-white ring-2 ring-emerald-500/30">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-violet-700 text-xs font-bold text-white ring-2 ring-violet-500/25">
           {!ready ? "…" : initials}
         </div>
         <div className="min-w-0">
@@ -89,49 +89,49 @@ export default function DashboardHeader() {
             type="button"
             className="flex max-w-[200px] items-center gap-1 text-left sm:max-w-xs"
           >
-            <span className="truncate text-sm font-semibold text-zinc-100">
+            <span className="truncate text-sm font-medium text-[#f0f0f0]">
               {!ready ? "Loading…" : primary}
             </span>
-            <svg className="h-4 w-4 shrink-0 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+            <svg className="h-3.5 w-3.5 shrink-0 text-[#6b6b6b]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
             </svg>
           </button>
-          {secondary ? <p className="truncate text-xs text-zinc-500">{secondary}</p> : null}
+          {secondary ? <p className="truncate text-xs text-[#6b6b6b]">{secondary}</p> : null}
         </div>
         <div className="ml-1 hidden items-center gap-1 sm:flex">
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#6b6b6b] transition hover:bg-white/[0.06] hover:text-[#c0c0c0]"
             aria-label="Notifications"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
             </svg>
           </button>
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-800 hover:text-zinc-200"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-[#6b6b6b] transition hover:bg-white/[0.06] hover:text-[#c0c0c0]"
             aria-label="Messages"
           >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
             </svg>
           </button>
         </div>
       </div>
 
-      <p className="hidden text-xs font-medium text-zinc-500 lg:block whitespace-nowrap">{line}</p>
+      <p className="hidden text-xs text-[#6b6b6b] lg:block whitespace-nowrap">{line}</p>
 
-      <div className="relative hidden min-w-[200px] max-w-md flex-1 md:block">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500">
+      <div className="relative hidden min-w-[200px] max-w-sm flex-1 md:block">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#6b6b6b]">
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
           </svg>
         </span>
         <input
           type="search"
-          placeholder="Search deals, leads, tasks…"
-          className="w-full rounded-xl border border-[color:var(--oa-border-zinc)] bg-zinc-950/80 py-2.5 pl-10 pr-4 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-emerald-500/55 focus:shadow-[0_0_0_3px_rgba(74,222,128,0.12)]"
+          placeholder="Search…"
+          className="w-full rounded-lg border border-white/[0.07] bg-white/[0.04] py-2 pl-9 pr-4 text-sm text-[#f0f0f0] placeholder:text-[#4a4a4a] outline-none transition focus:border-violet-500/40 focus:bg-white/[0.06] focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)]"
         />
       </div>
     </header>

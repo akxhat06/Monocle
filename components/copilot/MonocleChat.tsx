@@ -225,7 +225,7 @@ function TypingDots() {
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-bounce"
+          className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce"
           style={{ animationDelay: `${i * 0.18}s`, animationDuration: "0.9s" }}
         />
       ))}
@@ -237,14 +237,14 @@ function AgentStepper({ steps, isLoading }: { steps: Step[]; isLoading: boolean 
   if (steps.length === 0 && !isLoading) return null;
 
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3.5 py-3">
+    <div className="flex flex-col gap-1.5 rounded-xl border border-white/[0.07] bg-[#1f1f1f] px-3.5 py-3">
       {/* Header */}
       <div className="flex items-center gap-2 mb-0.5">
         <span className="relative flex h-2 w-2 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-50" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-400" />
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-[#5a5a5a]">
           Monocle is working
         </span>
       </div>
@@ -252,25 +252,23 @@ function AgentStepper({ steps, isLoading }: { steps: Step[]; isLoading: boolean 
       {steps.length === 0 && isLoading && (
         <div className="flex items-center gap-2 pl-0.5">
           <TypingDots />
-          <span className="text-xs text-zinc-500">Thinking…</span>
+          <span className="text-xs text-[#5a5a5a]">Thinking…</span>
         </div>
       )}
 
       {steps.map((step, i) => (
         <div key={step.id ?? i} className="flex items-center gap-2.5 pl-0.5">
           {step.status === "done" ? (
-            /* Checkmark */
-            <svg className="h-3.5 w-3.5 shrink-0 text-emerald-400" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.3" opacity="0.35" />
+            <svg className="h-3.5 w-3.5 shrink-0 text-violet-400" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.3" opacity="0.3" />
               <path d="M4.5 8.2l2.2 2.2 4.3-4.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           ) : (
-            /* Spinner */
-            <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-emerald-400" viewBox="0 0 16 16" fill="none" aria-hidden>
+            <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-violet-400" viewBox="0 0 16 16" fill="none" aria-hidden>
               <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" opacity="0.8" />
             </svg>
           )}
-          <span className={`text-xs leading-snug ${step.status === "done" ? "text-zinc-500" : "text-zinc-300"}`}>
+          <span className={`text-xs leading-snug ${step.status === "done" ? "text-[#4a4a4a]" : "text-[#c0c0c0]"}`}>
             {step.label}
           </span>
         </div>
@@ -409,8 +407,8 @@ export default function MonocleChat() {
         {showEmptyState && (
           <div className="flex flex-col gap-4 pb-2">
             <div className="flex flex-col items-center gap-2 pt-2">
-              <MonocleMarkAnimated size={56} title="Monocle AI" />
-              <p className="text-xs text-zinc-500 text-center">
+              <MonocleMarkAnimated size={52} title="Monocle AI" />
+              <p className="text-xs text-[#5a5a5a] text-center">
                 Ask anything — I&apos;ll query your data and build a live dashboard.
               </p>
             </div>
@@ -451,14 +449,14 @@ export default function MonocleChat() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">Try asking</p>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-[#3a3a3a]">Try asking</p>
               <div className="grid grid-cols-2 gap-1.5">
                 {SUGGESTIONS.map(({ label, prompt }) => (
                   <button
                     key={prompt}
                     type="button"
                     onClick={() => void submit(prompt)}
-                    className="rounded-xl border border-zinc-700/60 bg-zinc-900/60 px-3 py-2.5 text-left text-xs text-zinc-400 transition hover:border-emerald-500/40 hover:bg-zinc-900/90 hover:text-zinc-200 leading-snug"
+                    className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-2.5 text-left text-xs text-[#7a7a7a] transition hover:border-violet-500/25 hover:bg-violet-500/5 hover:text-[#c0c0c0] leading-snug"
                   >
                     {label}
                   </button>
@@ -473,7 +471,7 @@ export default function MonocleChat() {
           if (msg.role === "user") {
             return (
               <div key={msg.id} className="flex justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-sm border border-white/[0.09] bg-white/[0.06] px-3.5 py-2.5 text-sm text-zinc-100 leading-relaxed">
+                <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed">
                   {extractText(msg.content)}
                 </div>
               </div>
@@ -484,7 +482,7 @@ export default function MonocleChat() {
             const text = extractText(msg.content).trim();
             if (!text) return null;
             return (
-              <div key={msg.id} className="max-w-[90%] self-start rounded-2xl rounded-bl-sm border border-emerald-500/[0.18] bg-emerald-500/[0.07] px-3.5 py-2.5 text-sm text-zinc-200 leading-relaxed">
+              <div key={msg.id} className="max-w-[90%] self-start rounded-2xl rounded-bl-sm border border-white/[0.07] bg-[#1f1f1f] px-3.5 py-2.5 text-sm text-[#c0c0c0] leading-relaxed">
                 {renderMarkdown(text)}
               </div>
             );
@@ -495,7 +493,7 @@ export default function MonocleChat() {
 
         {/* ── AGUI Dashboard — rendered directly from render_dashboard tool call */}
         {dashboardNode && (
-          <div className="w-full overflow-hidden rounded-xl border border-emerald-500/20 bg-zinc-900/60 p-3">
+          <div className="w-full overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1a1a] p-3">
             {dashboardNode}
           </div>
         )}
@@ -505,7 +503,7 @@ export default function MonocleChat() {
           (m) => m.role === "user" && extractText(m.content).trim() === pendingUserMsg,
         ) && (
           <div className="flex justify-end">
-            <div className="max-w-[85%] rounded-2xl rounded-br-sm border border-white/[0.09] bg-white/[0.06] px-3.5 py-2.5 text-sm text-zinc-100 leading-relaxed">
+            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed">
               {pendingUserMsg}
             </div>
           </div>
@@ -520,8 +518,8 @@ export default function MonocleChat() {
       </div>
 
       {/* ── Input bar ────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-emerald-500/[0.18] bg-zinc-950/95 px-3 py-2.5">
-        <div className="flex items-end gap-2 rounded-xl border border-zinc-700/55 bg-zinc-900/80 px-3 py-2 focus-within:border-emerald-500/50 transition-colors">
+      <div className="shrink-0 border-t border-white/[0.06] bg-[#161616] px-3 py-2.5">
+        <div className="flex items-end gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 py-2 focus-within:border-violet-500/30 focus-within:bg-white/[0.05] transition-colors">
           <textarea
             ref={textareaRef}
             value={input}
@@ -530,14 +528,14 @@ export default function MonocleChat() {
             rows={1}
             placeholder="Ask an analytics question…"
             disabled={Boolean(pendingUserMsg) || isLoading}
-            className="flex-1 resize-none bg-transparent text-sm text-zinc-100 placeholder:text-zinc-600 outline-none disabled:opacity-40 leading-relaxed"
+            className="flex-1 resize-none bg-transparent text-sm text-[#f0f0f0] placeholder:text-[#3a3a3a] outline-none disabled:opacity-40 leading-relaxed"
             style={{ minHeight: "22px", maxHeight: "120px" }}
           />
           <button
             type="button"
             onClick={isLoading ? stopGeneration : () => void submit(input)}
             aria-label={isLoading ? "Stop generation" : "Send message"}
-            className="mb-0.5 shrink-0 rounded-lg p-1.5 text-emerald-400 transition hover:text-emerald-300 disabled:opacity-40"
+            className="mb-0.5 shrink-0 rounded-lg p-1.5 text-violet-400 transition hover:text-violet-300 disabled:opacity-30"
             disabled={!isLoading && !input.trim()}
           >
             {isLoading ? (
@@ -551,7 +549,7 @@ export default function MonocleChat() {
             )}
           </button>
         </div>
-        <p className="mt-1.5 text-center text-[10px] text-zinc-700">Powered by CopilotKit</p>
+        <p className="mt-1.5 text-center text-[10px] text-[#2a2a2a]">Powered by CopilotKit</p>
       </div>
     </div>
   );

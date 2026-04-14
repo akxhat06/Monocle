@@ -48,23 +48,23 @@ export default function CrmDashboard() {
 
       {/* ── AI Chat Panel ──────────────────────────────────────────────────── */}
       <aside
-        className={`relative z-10 h-full shrink-0 border-l border-[color:var(--oa-border-green)] bg-zinc-950/90 backdrop-blur-md transition-all duration-300 ease-out ${
-          chatOpen ? "w-[560px]" : "w-0 border-l-0 overflow-hidden"
+        className={`relative z-10 h-full shrink-0 border-l border-white/[0.06] bg-[#161616] transition-all duration-300 ease-out ${
+          chatOpen ? "w-[540px]" : "w-0 border-l-0 overflow-hidden"
         }`}
         aria-hidden={!chatOpen}
       >
         {chatOpen && (
           <div className="flex h-full min-h-0 flex-col">
             {/* Panel header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-emerald-500/20 px-4 py-3">
+            <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-3">
               <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" aria-hidden />
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400">Monocle AI</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.5)]" aria-hidden />
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-[#6b6b6b]">Monocle AI</span>
               </div>
               <button
                 type="button"
                 onClick={() => setChatOpen(false)}
-                className="rounded-full border border-white/[0.08] bg-zinc-900/90 p-1.5 text-zinc-500 transition hover:border-emerald-500/35 hover:text-zinc-200"
+                className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-[#6b6b6b] transition hover:bg-white/[0.08] hover:text-[#c0c0c0]"
                 aria-label="Close AI assistant"
               >
                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -83,10 +83,10 @@ export default function CrmDashboard() {
 
       {/* ── Floating bot button ────────────────────────────────────────────── */}
       {!chatOpen && (
-        <div className="pointer-events-none fixed bottom-9 right-9 z-50">
+        <div className="pointer-events-none fixed bottom-8 right-8 z-50">
           <button
             type="button"
-            className="pointer-events-auto relative flex cursor-pointer flex-col items-center border-0 bg-transparent p-0 transition hover:scale-[1.02]"
+            className="pointer-events-auto relative flex cursor-pointer flex-col items-center border-0 bg-transparent p-0 transition hover:scale-[1.03]"
             onClick={() => setChatOpen(true)}
             onMouseEnter={() => setBotHover(true)}
             onMouseLeave={() => setBotHover(false)}
@@ -102,14 +102,14 @@ export default function CrmDashboard() {
               aria-hidden={!botHover}
             >
               <div className="relative w-max max-w-[calc(100vw-2rem)]">
-                <div className="rounded-xl border border-emerald-500/30 bg-zinc-950/95 px-2.5 py-1.5 shadow-lg shadow-black/50 ring-1 ring-white/[0.06] backdrop-blur-md">
-                  <p className="whitespace-nowrap text-center text-[11px] font-semibold leading-tight text-zinc-100">
-                    <span className="text-emerald-300">Hey!!</span>{" "}
-                    <span className="font-medium text-zinc-200">Ask me anything</span>
+                <div className="rounded-xl border border-white/[0.1] bg-[#1f1f1f] px-3 py-1.5 shadow-xl shadow-black/40 backdrop-blur-md">
+                  <p className="whitespace-nowrap text-center text-[11px] font-medium leading-tight text-[#c0c0c0]">
+                    <span className="text-violet-400">Hey!</span>{" "}
+                    Ask me anything
                   </p>
                 </div>
                 <div
-                  className="absolute left-1/2 top-full z-10 -mt-px h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-emerald-500/30 border-t-0 border-l-0 bg-zinc-950/95"
+                  className="absolute left-1/2 top-full z-10 -mt-px h-2.5 w-2.5 -translate-x-1/2 rotate-45 border border-white/[0.1] border-t-0 border-l-0 bg-[#1f1f1f]"
                   aria-hidden
                 />
               </div>
@@ -119,7 +119,7 @@ export default function CrmDashboard() {
               src="/ai-chat-analytics.svg"
               alt=""
               aria-hidden
-              className="h-[7rem] w-[7rem] shrink-0 select-none opacity-95"
+              className="h-[7rem] w-[7rem] shrink-0 select-none opacity-90"
               width={180}
               height={180}
               draggable={false}

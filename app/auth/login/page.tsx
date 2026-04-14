@@ -228,7 +228,7 @@ export default function LoginPage() {
     { id: "a", label: "Activity", pct: 18, color: "#fbbf24" },
     { id: "b", label: "Meals", pct: 22, color: "#38bdf8" },
     { id: "c", label: "Office supplies", pct: 15, color: "#a78bfa" },
-    { id: "d", label: "Rewards", pct: 12, color: "#4ade80" },
+    { id: "d", label: "Rewards", pct: 12, color: "#a78bfa" },
     { id: "e", label: "Internet & Tel.", pct: 14, color: "#fb923c" },
     { id: "f", label: "Other", pct: 19, color: "#64748b" },
   ] as const;
@@ -436,7 +436,7 @@ export default function LoginPage() {
                     </div>
                     <ul className="agui-hbar-list">
                       {[
-                        { label: "Software", pct: 82, color: "#4ade80" },
+                        { label: "Software", pct: 82, color: "#a78bfa" },
                         { label: "Travel", pct: 58, color: "#38bdf8" },
                         { label: "Payroll", pct: 44, color: "#a78bfa" },
                         { label: "Other", pct: 26, color: "#64748b" },
@@ -749,12 +749,12 @@ export default function LoginPage() {
           font-weight: 600;
           color: var(--oa-text);
           background: linear-gradient(165deg, rgba(24, 24, 27, 0.98) 0%, rgba(9, 9, 11, 0.99) 100%);
-          border: 1px solid rgba(74, 222, 128, 0.28);
+          border: 1px solid rgba(167, 139, 250, 0.28);
           border-radius: 14px;
           box-shadow:
             0 0 0 1px rgba(0, 0, 0, 0.4),
             0 20px 50px -18px rgba(0, 0, 0, 0.65),
-            0 0 28px -12px rgba(74, 222, 128, 0.35);
+            0 0 28px -12px rgba(167, 139, 250, 0.35);
           backdrop-filter: blur(14px);
           animation: toast-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
         }
@@ -765,7 +765,7 @@ export default function LoginPage() {
           border-radius: 50%;
           flex-shrink: 0;
           background: var(--neon);
-          box-shadow: 0 0 14px rgba(74, 222, 128, 0.85);
+          box-shadow: 0 0 14px rgba(167, 139, 250, 0.85);
         }
 
         @keyframes toast-in {
@@ -792,25 +792,25 @@ export default function LoginPage() {
         }
 
         .login-shell {
-          /* Align with OpeningAnimation (.oa-overlay / .oa-dash) */
-          --oa-bg-top: #0f1218;
-          --oa-bg-mid: #09090b;
-          --oa-bg-bot: #050506;
-          --oa-surface: rgba(24, 24, 27, 0.98);
-          --oa-surface-deep: rgba(9, 9, 11, 0.99);
-          --oa-border-green: rgba(74, 222, 128, 0.28);
-          --oa-border-zinc: rgba(63, 63, 70, 0.85);
-          --oa-text: #fafafa;
-          --oa-muted: rgba(161, 161, 170, 0.9);
+          /* Neutral dark — violet accent (matches dashboard theme) */
+          --oa-bg-top:    #191919;
+          --oa-bg-mid:    #141414;
+          --oa-bg-bot:    #0f0f0f;
+          --oa-surface:   rgba(26, 26, 26, 0.98);
+          --oa-surface-deep: rgba(20, 20, 20, 0.99);
+          --oa-border-green: rgba(255, 255, 255, 0.08);
+          --oa-border-zinc:  rgba(255, 255, 255, 0.08);
+          --oa-text: #f0f0f0;
+          --oa-muted: rgba(160, 160, 160, 0.9);
           --bg-deep: var(--oa-bg-mid);
-          --bg-elevated: #18181b;
-          --border-subtle: var(--oa-border-zinc);
-          --neon: #4ade80;
-          --neon-dim: rgba(74, 222, 128, 0.14);
-          --neon-mid: #22c55e;
-          --neon-dark: #15803d;
+          --bg-elevated: #1c1c1c;
+          --border-subtle: rgba(255, 255, 255, 0.07);
+          --neon: #a78bfa;
+          --neon-dim: rgba(167, 139, 250, 0.14);
+          --neon-mid: #8b5cf6;
+          --neon-dark: #6d28d9;
           --amber: #fbbf24;
-          --text-muted: #a1a1aa;
+          --text-muted: #a0a0a0;
           position: fixed;
           inset: 0;
           display: grid;
@@ -836,9 +836,9 @@ export default function LoginPage() {
           inset: 0;
           pointer-events: none;
           background:
-            radial-gradient(ellipse 90% 70% at 50% 20%, rgba(74, 222, 128, 0.14) 0%, transparent 55%),
-            radial-gradient(ellipse 55% 45% at 85% 75%, rgba(34, 197, 94, 0.06) 0%, transparent 45%),
-            radial-gradient(ellipse 50% 40% at 8% 60%, rgba(52, 211, 153, 0.05) 0%, transparent 40%);
+            radial-gradient(ellipse 90% 70% at 50% 20%, rgba(167, 139, 250, 0.14) 0%, transparent 55%),
+            radial-gradient(ellipse 55% 45% at 85% 75%, rgba(109, 40, 217, 0.06) 0%, transparent 45%),
+            radial-gradient(ellipse 50% 40% at 8% 60%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
         }
 
         .dash-side::after {
@@ -848,8 +848,8 @@ export default function LoginPage() {
           pointer-events: none;
           opacity: 0.35;
           background-image:
-            linear-gradient(rgba(74, 222, 128, 0.07) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(74, 222, 128, 0.07) 1px, transparent 1px);
+            linear-gradient(rgba(167, 139, 250, 0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(167, 139, 250, 0.07) 1px, transparent 1px);
           background-size: 48px 48px;
           animation: login-grid-drift 18s linear infinite;
         }
@@ -895,7 +895,7 @@ export default function LoginPage() {
           box-shadow:
             inset 0 1px 0 rgba(255, 255, 255, 0.06),
             0 0 0 1px rgba(0, 0, 0, 0.4),
-            0 0 32px rgba(74, 222, 128, 0.06),
+            0 0 32px rgba(167, 139, 250, 0.06),
             0 16px 48px -24px rgba(0, 0, 0, 0.55);
           backdrop-filter: blur(12px);
           min-height: 0;
@@ -963,11 +963,11 @@ export default function LoginPage() {
           font-size: 10px;
           font-weight: 600;
           color: #052e16;
-          background: linear-gradient(135deg, #4ade80, #22c55e);
+          background: linear-gradient(135deg, #a78bfa, #8b5cf6);
           padding: 5px 10px;
           border-radius: 999px;
           white-space: nowrap;
-          box-shadow: 0 0 16px -4px rgba(74, 222, 128, 0.5);
+          box-shadow: 0 0 16px -4px rgba(167, 139, 250, 0.5);
         }
 
         .rev-segments {
@@ -1050,11 +1050,11 @@ export default function LoginPage() {
           font-size: 8px;
           font-weight: 700;
           color: #052e16;
-          background: linear-gradient(135deg, #bbf7d0, var(--neon) 55%, var(--neon-mid));
+          background: linear-gradient(135deg, #ede9fe, var(--neon) 55%, var(--neon-mid));
           padding: 2px 5px;
           border-radius: 6px;
           white-space: nowrap;
-          box-shadow: 0 0 12px rgba(74, 222, 128, 0.55);
+          box-shadow: 0 0 12px rgba(167, 139, 250, 0.55);
         }
 
         .rev-bar {
@@ -1079,7 +1079,7 @@ export default function LoginPage() {
 
         .rev-bar-hot {
           background: linear-gradient(180deg, var(--neon) 0%, var(--neon-dark) 100%);
-          box-shadow: 0 0 14px rgba(74, 222, 128, 0.35);
+          box-shadow: 0 0 14px rgba(167, 139, 250, 0.35);
         }
 
         .rev-bar-foot {
@@ -1156,7 +1156,7 @@ export default function LoginPage() {
         .cal-cell-today {
           background: var(--neon);
           color: var(--oa-bg-bot);
-          box-shadow: 0 0 12px rgba(74, 222, 128, 0.55);
+          box-shadow: 0 0 12px rgba(167, 139, 250, 0.55);
         }
 
         .cal-foot {
@@ -1177,7 +1177,7 @@ export default function LoginPage() {
         .cal-foot-up {
           font-size: 11px;
           font-weight: 600;
-          color: #4ade80;
+          color: #a78bfa;
         }
 
         .cal-foot-arrow {
@@ -1220,10 +1220,10 @@ export default function LoginPage() {
         }
 
         .ai-sparkle {
-          color: #86efac;
+          color: #c4b5fd;
           flex-shrink: 0;
           overflow: visible;
-          filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.45));
+          filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.45));
           animation: ai-sparkle-float 4.5s ease-in-out infinite;
         }
 
@@ -1259,7 +1259,7 @@ export default function LoginPage() {
           overflow-x: hidden;
           overflow-y: auto;
           scrollbar-width: thin;
-          scrollbar-color: rgba(74, 222, 128, 0.25) transparent;
+          scrollbar-color: rgba(167, 139, 250, 0.25) transparent;
         }
 
         .ai-results::-webkit-scrollbar {
@@ -1267,7 +1267,7 @@ export default function LoginPage() {
         }
 
         .ai-results::-webkit-scrollbar-thumb {
-          background: rgba(74, 222, 128, 0.28);
+          background: rgba(167, 139, 250, 0.28);
           border-radius: 4px;
         }
 
@@ -1285,7 +1285,7 @@ export default function LoginPage() {
           width: 5px;
           height: 5px;
           border-radius: 50%;
-          background: #86efac;
+          background: #c4b5fd;
           animation: ai-dot-pulse 0.9s ease-in-out infinite;
         }
 
@@ -1378,7 +1378,7 @@ export default function LoginPage() {
           padding: 2px 6px;
           border-radius: 999px;
           color: #052e16;
-          background: linear-gradient(135deg, #bbf7d0, var(--neon));
+          background: linear-gradient(135deg, #ede9fe, var(--neon));
           flex-shrink: 0;
         }
 
@@ -1506,7 +1506,7 @@ export default function LoginPage() {
           max-width: 7px;
           border-radius: 3px 3px 1px 1px;
           background: linear-gradient(180deg, var(--neon) 0%, var(--neon-dark) 100%);
-          box-shadow: 0 0 8px rgba(74, 222, 128, 0.25);
+          box-shadow: 0 0 8px rgba(167, 139, 250, 0.25);
           transform-origin: bottom center;
           animation: agui-bar-in 0.55s cubic-bezier(0.34, 1.15, 0.64, 1) backwards;
         }
@@ -1624,13 +1624,13 @@ export default function LoginPage() {
         }
 
         .ai-prompt--focus {
-          border-color: rgba(74, 222, 128, 0.35);
-          box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.12);
+          border-color: rgba(167, 139, 250, 0.35);
+          box-shadow: 0 0 0 1px rgba(167, 139, 250, 0.12);
           background: rgba(0, 0, 0, 0.38);
         }
 
         .ai-prompt--send .ai-prompt-send {
-          color: #4ade80;
+          color: #a78bfa;
           opacity: 1;
           animation: ai-send-pulse 0.45s ease;
         }
@@ -1666,7 +1666,7 @@ export default function LoginPage() {
           width: 2px;
           height: 12px;
           margin-left: 1px;
-          background: #4ade80;
+          background: #a78bfa;
           border-radius: 1px;
           animation: ai-caret-blink 1s step-end infinite;
           vertical-align: middle;
@@ -1843,8 +1843,8 @@ export default function LoginPage() {
         }
 
         .inv-dot-paid {
-          background: #4ade80;
-          box-shadow: 0 0 8px rgba(74, 222, 128, 0.35);
+          background: #a78bfa;
+          box-shadow: 0 0 8px rgba(167, 139, 250, 0.35);
         }
 
         .inv-dot-pending {
@@ -1949,9 +1949,9 @@ export default function LoginPage() {
           inset: 0;
           pointer-events: none;
           background:
-            radial-gradient(ellipse 90% 70% at 50% 20%, rgba(74, 222, 128, 0.14) 0%, transparent 55%),
-            radial-gradient(ellipse 55% 45% at 85% 75%, rgba(34, 197, 94, 0.06) 0%, transparent 45%),
-            radial-gradient(ellipse 50% 40% at 8% 60%, rgba(52, 211, 153, 0.05) 0%, transparent 40%);
+            radial-gradient(ellipse 90% 70% at 50% 20%, rgba(167, 139, 250, 0.14) 0%, transparent 55%),
+            radial-gradient(ellipse 55% 45% at 85% 75%, rgba(109, 40, 217, 0.06) 0%, transparent 45%),
+            radial-gradient(ellipse 50% 40% at 8% 60%, rgba(139, 92, 246, 0.05) 0%, transparent 40%);
         }
 
         .form-side-bg::after {
@@ -1960,8 +1960,8 @@ export default function LoginPage() {
           inset: 0;
           opacity: 0.35;
           background-image:
-            linear-gradient(rgba(74, 222, 128, 0.07) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(74, 222, 128, 0.07) 1px, transparent 1px);
+            linear-gradient(rgba(167, 139, 250, 0.07) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(167, 139, 250, 0.07) 1px, transparent 1px);
           background-size: 48px 48px;
           mask-image: linear-gradient(180deg, transparent 0%, black 8%, black 92%, transparent 100%);
           animation: login-grid-drift 18s linear infinite;
@@ -2032,7 +2032,7 @@ export default function LoginPage() {
             inset 0 1px 0 rgba(255, 255, 255, 0.05),
             0 0 0 1px rgba(0, 0, 0, 0.5),
             0 20px 50px -20px rgba(0, 0, 0, 0.7),
-            0 0 80px -36px rgba(74, 222, 128, 0.07);
+            0 0 80px -36px rgba(167, 139, 250, 0.07);
           backdrop-filter: blur(14px);
         }
 
@@ -2085,8 +2085,8 @@ export default function LoginPage() {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #4ade80;
-          box-shadow: 0 0 8px rgba(74, 222, 128, 0.55);
+          background: #a78bfa;
+          box-shadow: 0 0 8px rgba(167, 139, 250, 0.55);
           animation: badge-pulse 2s ease-in-out infinite;
         }
 
@@ -2118,7 +2118,7 @@ export default function LoginPage() {
           letter-spacing: -0.02em;
         }
 
-        .accent { color: #4ade80; font-style: italic; }
+        .accent { color: #a78bfa; font-style: italic; }
 
         .subtitle {
           margin: 0 0 16px;
@@ -2181,9 +2181,9 @@ export default function LoginPage() {
         }
 
         .input-box:focus-within {
-          border-color: rgba(74, 222, 128, 0.55);
+          border-color: rgba(167, 139, 250, 0.55);
           box-shadow:
-            0 0 0 3px rgba(74, 222, 128, 0.12),
+            0 0 0 3px rgba(167, 139, 250, 0.12),
             0 12px 28px -12px rgba(0, 0, 0, 0.35);
         }
 
@@ -2195,7 +2195,7 @@ export default function LoginPage() {
         }
 
         .input-box:focus-within .ic {
-          color: #86efac;
+          color: #c4b5fd;
         }
 
         .input-box .eye svg {
@@ -2240,7 +2240,7 @@ export default function LoginPage() {
           border-radius: 8px;
         }
 
-        .eye:hover { opacity: 1; background: rgba(74, 222, 128, 0.08); }
+        .eye:hover { opacity: 1; background: rgba(167, 139, 250, 0.08); }
 
         .form-row {
           display: flex;
@@ -2273,15 +2273,15 @@ export default function LoginPage() {
         }
 
         .cb.on {
-          background: linear-gradient(135deg, #22c55e, #4ade80);
+          background: linear-gradient(135deg, #8b5cf6, #a78bfa);
           border-color: transparent;
-          box-shadow: 0 0 12px rgba(74, 222, 128, 0.35);
+          box-shadow: 0 0 12px rgba(167, 139, 250, 0.35);
         }
 
-        .forgot { font-size: 13px; color: #86efac; text-decoration: none; font-weight: 500; }
-        .forgot:hover { text-decoration: underline; color: #4ade80; }
+        .forgot { font-size: 13px; color: #c4b5fd; text-decoration: none; font-weight: 500; }
+        .forgot:hover { text-decoration: underline; color: #a78bfa; }
 
-        .tlink { color: #4ade80; font-weight: 500; cursor: pointer; }
+        .tlink { color: #a78bfa; font-weight: 500; cursor: pointer; }
         .tlink:hover { text-decoration: underline; }
 
         .err {
@@ -2308,8 +2308,8 @@ export default function LoginPage() {
           box-shadow:
             0 1px 0 rgba(255, 255, 255, 0.35) inset,
             0 0 0 1px rgba(255, 255, 255, 0.06) inset,
-            0 3px 12px -4px rgba(74, 222, 128, 0.28),
-            0 0 16px -10px rgba(74, 222, 128, 0.18);
+            0 3px 12px -4px rgba(167, 139, 250, 0.28),
+            0 0 16px -10px rgba(167, 139, 250, 0.18);
           transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s, filter 0.2s;
         }
 
@@ -2319,8 +2319,8 @@ export default function LoginPage() {
           box-shadow:
             0 1px 0 rgba(255, 255, 255, 0.4) inset,
             0 0 0 1px rgba(255, 255, 255, 0.08) inset,
-            0 5px 18px -6px rgba(74, 222, 128, 0.36),
-            0 0 22px -10px rgba(74, 222, 128, 0.24);
+            0 5px 18px -6px rgba(167, 139, 250, 0.36),
+            0 0 22px -10px rgba(167, 139, 250, 0.24);
         }
 
         .btn-primary:active:not(:disabled) {
@@ -2387,7 +2387,7 @@ export default function LoginPage() {
         .switch-link {
           background: none;
           border: none;
-          color: #4ade80;
+          color: #a78bfa;
           font-weight: 600;
           font-size: 13px;
           cursor: pointer;
@@ -2395,7 +2395,7 @@ export default function LoginPage() {
           font-family: inherit;
         }
 
-        .switch-link:hover { text-decoration: underline; color: #86efac; }
+        .switch-link:hover { text-decoration: underline; color: #c4b5fd; }
 
         /* ===== RESPONSIVE — mobile: strict viewport box, no scroll ===== */
         @media (max-width: 900px) {
@@ -2448,8 +2448,8 @@ export default function LoginPage() {
             border-radius: 50%;
             background: radial-gradient(
               circle at 50% 45%,
-              rgba(74, 222, 128, 0.12) 0%,
-              rgba(74, 222, 128, 0.03) 42%,
+              rgba(167, 139, 250, 0.12) 0%,
+              rgba(167, 139, 250, 0.03) 42%,
               transparent 68%
             );
             pointer-events: none;
@@ -2463,7 +2463,7 @@ export default function LoginPage() {
           .mobile-hero-logo-wrap .monocle-mark-svg {
             width: 88px !important;
             height: 88px !important;
-            filter: drop-shadow(0 8px 32px rgba(74, 222, 128, 0.2));
+            filter: drop-shadow(0 8px 32px rgba(167, 139, 250, 0.2));
           }
 
           .mobile-hero-titles {
@@ -2601,7 +2601,7 @@ export default function LoginPage() {
               inset 0 1px 0 rgba(255, 255, 255, 0.05),
               0 0 0 1px rgba(0, 0, 0, 0.45),
               0 20px 50px -24px rgba(0, 0, 0, 0.68),
-              0 0 60px -28px rgba(74, 222, 128, 0.06);
+              0 0 60px -28px rgba(167, 139, 250, 0.06);
             animation: none;
           }
 

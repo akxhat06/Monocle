@@ -31,46 +31,46 @@ type MetricTheme = {
 
 const METRIC_THEME: Record<OverviewDisplayMetricKey, MetricTheme> = {
   users: {
-    hex: "#4ade80",
-    iconWrap: "bg-emerald-500/15",
-    iconRing: "ring-emerald-500/25",
-    badge: "bg-emerald-500/18",
-    badgeText: "text-emerald-200",
+    hex: "#a78bfa",
+    iconWrap: "bg-violet-500/10",
+    iconRing: "ring-violet-500/20",
+    badge: "bg-violet-500/10",
+    badgeText: "text-violet-300",
   },
   calls: {
-    hex: "#38bdf8",
-    iconWrap: "bg-sky-500/15",
-    iconRing: "ring-sky-500/25",
-    badge: "bg-sky-500/18",
-    badgeText: "text-sky-200",
+    hex: "#60a5fa",
+    iconWrap: "bg-blue-500/10",
+    iconRing: "ring-blue-500/20",
+    badge: "bg-blue-500/10",
+    badgeText: "text-blue-300",
   },
   questions: {
-    hex: "#a78bfa",
-    iconWrap: "bg-violet-500/15",
-    iconRing: "ring-violet-500/25",
-    badge: "bg-violet-500/18",
-    badgeText: "text-violet-200",
+    hex: "#34d399",
+    iconWrap: "bg-emerald-500/10",
+    iconRing: "ring-emerald-500/20",
+    badge: "bg-emerald-500/10",
+    badgeText: "text-emerald-300",
   },
   errors: {
     hex: "#fb7185",
-    iconWrap: "bg-rose-500/15",
-    iconRing: "ring-rose-500/25",
-    badge: "bg-rose-500/18",
-    badgeText: "text-rose-200",
+    iconWrap: "bg-rose-500/10",
+    iconRing: "ring-rose-500/20",
+    badge: "bg-rose-500/10",
+    badgeText: "text-rose-300",
   },
   asrDetails: {
     hex: "#fbbf24",
-    iconWrap: "bg-amber-500/15",
-    iconRing: "ring-amber-500/25",
-    badge: "bg-amber-500/18",
-    badgeText: "text-amber-200",
+    iconWrap: "bg-amber-500/10",
+    iconRing: "ring-amber-500/20",
+    badge: "bg-amber-500/10",
+    badgeText: "text-amber-300",
   },
   ttsDetails: {
     hex: "#2dd4bf",
-    iconWrap: "bg-teal-500/15",
-    iconRing: "ring-teal-500/25",
-    badge: "bg-teal-500/18",
-    badgeText: "text-teal-200",
+    iconWrap: "bg-teal-500/10",
+    iconRing: "ring-teal-500/20",
+    badge: "bg-teal-500/10",
+    badgeText: "text-teal-300",
   },
 };
 
@@ -344,7 +344,7 @@ export default function DashboardMain() {
               <button
                 type="button"
                 onClick={() => applyPreset("all")}
-                className="rounded-[10px] border border-emerald-500/35 bg-emerald-500/12 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-200 transition hover:border-emerald-500/50 hover:bg-emerald-500/18"
+                className="rounded-lg border border-violet-500/30 bg-violet-500/8 px-2.5 py-1.5 text-[11px] font-medium text-violet-300 transition hover:border-violet-500/45 hover:bg-violet-500/12"
               >
                 All
               </button>
@@ -353,7 +353,7 @@ export default function DashboardMain() {
                   key={d}
                   type="button"
                   onClick={() => applyPreset(d)}
-                  className="rounded-[10px] border border-white/[0.08] bg-black/30 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-500 transition hover:border-emerald-500/35 hover:text-emerald-200"
+                  className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-[#5a5a5a] transition hover:border-violet-500/25 hover:text-violet-300"
                 >
                   {d}d
                 </button>
@@ -369,25 +369,25 @@ export default function DashboardMain() {
                   max={to}
                   min={RANGE_ALL_FROM}
                   onChange={(e) => setFrom(e.target.value)}
-                  className="h-9 max-w-[9.25rem] rounded-[11px] border border-[color:var(--oa-border-zinc)] bg-zinc-950/85 px-2.5 text-xs text-zinc-100 outline-none transition focus:border-emerald-500/55 focus:shadow-[0_0_0_3px_rgba(74,222,128,0.12)]"
+                  className="h-8 max-w-[9.25rem] rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 text-xs text-[#f0f0f0] outline-none transition focus:border-violet-500/40 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)]"
                 />
               </label>
               <label className="flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">To</span>
+                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#5a5a5a]">To</span>
                 <input
                   type="date"
                   value={to}
                   min={from}
                   max={today}
                   onChange={(e) => setTo(e.target.value)}
-                  className="h-9 max-w-[9.25rem] rounded-[11px] border border-[color:var(--oa-border-zinc)] bg-zinc-950/85 px-2.5 text-xs text-zinc-100 outline-none transition focus:border-emerald-500/55 focus:shadow-[0_0_0_3px_rgba(74,222,128,0.12)]"
+                  className="h-8 max-w-[9.25rem] rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 text-xs text-[#f0f0f0] outline-none transition focus:border-violet-500/40 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)]"
                 />
               </label>
               <button
                 type="button"
                 onClick={() => void load()}
                 disabled={loading}
-                className="h-9 shrink-0 rounded-xl bg-[var(--neon)] px-3.5 text-xs font-extrabold tracking-wide text-[var(--oa-bg-bot)] shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition hover:brightness-110 disabled:opacity-50"
+                className="h-8 shrink-0 rounded-lg bg-violet-600 px-3.5 text-xs font-semibold tracking-wide text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-violet-500 disabled:opacity-40"
               >
                 {loading ? "…" : "Apply"}
               </button>
