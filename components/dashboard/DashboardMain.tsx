@@ -1,6 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import {
+  AreaChart, Area, BarChart, Bar, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend,
+} from "recharts";
 import { previousRange, shiftDays, toYmd } from "@/lib/overview/date-range";
 import type {
   OverviewCounts,
@@ -8,21 +13,26 @@ import type {
   OverviewDisplayMetricKey,
 } from "@/lib/overview/types";
 
+// ── Chart data types ─────────────────────────────────────────────────────────
+type TrendRow   = { day: string; calls: number; questions: number };
+type ChannelRow = { channel: string; questions: number };
+
 const METRIC_ROWS: {
   key: OverviewDisplayMetricKey;
   title: string;
   trendKey: keyof OverviewCounts;
 }[] = [
-  { key: "users", title: "Users", trendKey: "usersActiveInRange" },
-  { key: "calls", title: "Calls", trendKey: "callsInRange" },
-  { key: "questions", title: "Questions", trendKey: "questionsInRange" },
-  { key: "errors", title: "Errors", trendKey: "errorsInRange" },
-  { key: "asrDetails", title: "ASR", trendKey: "asrDetailsInRange" },
-  { key: "ttsDetails", title: "TTS", trendKey: "ttsDetailsInRange" },
+  { key: "users",      title: "Users",     trendKey: "usersActiveInRange"  },
+  { key: "calls",      title: "Calls",     trendKey: "callsInRange"        },
+  { key: "questions",  title: "Questions", trendKey: "questionsInRange"    },
+  { key: "errors",     title: "Errors",    trendKey: "errorsInRange"       },
+  { key: "asrDetails", title: "ASR",       trendKey: "asrDetailsInRange"   },
+  { key: "ttsDetails", title: "TTS",       trendKey: "ttsDetailsInRange"   },
 ];
 
 type MetricTheme = {
   hex: string;
+  hexDim: string;
   iconWrap: string;
   iconRing: string;
   badge: string;
@@ -31,53 +41,44 @@ type MetricTheme = {
 
 const METRIC_THEME: Record<OverviewDisplayMetricKey, MetricTheme> = {
   users: {
-    hex: "#a78bfa",
-    iconWrap: "bg-violet-500/10",
-    iconRing: "ring-violet-500/20",
-    badge: "bg-violet-500/10",
-    badgeText: "text-violet-300",
+    hex: "#a78bfa", hexDim: "rgba(167,139,250,0.18)",
+    iconWrap: "bg-violet-500/10", iconRing: "ring-violet-500/20",
+    badge: "bg-violet-500/10",   badgeText: "text-violet-300",
   },
   calls: {
-    hex: "#60a5fa",
-    iconWrap: "bg-blue-500/10",
-    iconRing: "ring-blue-500/20",
-    badge: "bg-blue-500/10",
-    badgeText: "text-blue-300",
+    hex: "#60a5fa", hexDim: "rgba(96,165,250,0.18)",
+    iconWrap: "bg-blue-500/10",   iconRing: "ring-blue-500/20",
+    badge: "bg-blue-500/10",     badgeText: "text-blue-300",
   },
   questions: {
-    hex: "#34d399",
-    iconWrap: "bg-emerald-500/10",
-    iconRing: "ring-emerald-500/20",
-    badge: "bg-emerald-500/10",
-    badgeText: "text-emerald-300",
+    hex: "#34d399", hexDim: "rgba(52,211,153,0.18)",
+    iconWrap: "bg-emerald-500/10", iconRing: "ring-emerald-500/20",
+    badge: "bg-emerald-500/10",   badgeText: "text-emerald-300",
   },
   errors: {
-    hex: "#fb7185",
-    iconWrap: "bg-rose-500/10",
-    iconRing: "ring-rose-500/20",
-    badge: "bg-rose-500/10",
-    badgeText: "text-rose-300",
+    hex: "#fb7185", hexDim: "rgba(251,113,133,0.18)",
+    iconWrap: "bg-rose-500/10",   iconRing: "ring-rose-500/20",
+    badge: "bg-rose-500/10",     badgeText: "text-rose-300",
   },
   asrDetails: {
-    hex: "#fbbf24",
-    iconWrap: "bg-amber-500/10",
-    iconRing: "ring-amber-500/20",
-    badge: "bg-amber-500/10",
-    badgeText: "text-amber-300",
+    hex: "#fbbf24", hexDim: "rgba(251,191,36,0.18)",
+    iconWrap: "bg-amber-500/10",  iconRing: "ring-amber-500/20",
+    badge: "bg-amber-500/10",    badgeText: "text-amber-300",
   },
   ttsDetails: {
-    hex: "#2dd4bf",
-    iconWrap: "bg-teal-500/10",
-    iconRing: "ring-teal-500/20",
-    badge: "bg-teal-500/10",
-    badgeText: "text-teal-300",
+    hex: "#2dd4bf", hexDim: "rgba(45,212,191,0.18)",
+    iconWrap: "bg-teal-500/10",   iconRing: "ring-teal-500/20",
+    badge: "bg-teal-500/10",     badgeText: "text-teal-300",
   },
 };
 
-/** Inclusive lower bound for “all time” counts in the UI. */
-const RANGE_ALL_FROM = "2000-01-01";
+/** The date from which we have meaningful data. Default start for "All" range. */
+const DATA_START = "2026-02-17";
+const RANGE_ALL_FROM = DATA_START;
 
-function barSeriesFromCounts(prev: number, curr: number, n = 14): number[] {
+// ── Sparkline data generation ─────────────────────────────────────────────────
+
+function sparkSeries(prev: number, curr: number, n = 20): number[] {
   const lp = Math.log1p(Math.max(0, prev));
   const lc = Math.log1p(Math.max(0, curr));
   const denom = Math.max(lp, lc, 0.35) + 0.2;
@@ -85,9 +86,11 @@ function barSeriesFromCounts(prev: number, curr: number, n = 14): number[] {
   for (let i = 0; i < n; i++) {
     const t = i / (n - 1);
     const blend = lp + (lc - lp) * t;
-    const wave = Math.sin((i / n) * Math.PI * 2.8) * 0.28;
-    const norm = blend / denom - 0.55 + wave;
-    out.push(Math.max(-1, Math.min(1, norm * 1.35)));
+    const wave =
+      Math.sin((i / n) * Math.PI * 2.4 + 0.3) * 0.22 +
+      Math.sin((i / n) * Math.PI * 5.1 + 1.1) * 0.10;
+    const norm = (blend / denom) * 0.88 + wave + 0.08;
+    out.push(Math.max(0.04, Math.min(0.98, norm)));
   }
   return out;
 }
@@ -105,8 +108,70 @@ function pctChangeLabel(prev: number, curr: number): { pct: string; up: boolean;
   return { pct, up, flat: Math.abs(raw) < 0.05 };
 }
 
+// ── SparkAreaChart — full-width area + line at card bottom ───────────────────
+
+function SparkAreaChart({ values, color, hexDim }: { values: number[]; color: string; hexDim: string }) {
+  const uid = useId().replace(/:/g, "");
+  const W = 280;
+  const H = 64;
+  const PAD_X = 0;
+  const PAD_Y = 4;
+
+  const pts = values.map((v, i) => {
+    const x = PAD_X + (i / (values.length - 1)) * (W - PAD_X * 2);
+    const y = H - PAD_Y - v * (H - PAD_Y * 2);
+    return { x, y };
+  });
+
+  const linePath = pts
+    .map((p, i) => {
+      if (i === 0) return `M${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+      // Smooth cubic bezier
+      const prev = pts[i - 1];
+      const cpx = (prev.x + p.x) / 2;
+      return `C${cpx.toFixed(1)},${prev.y.toFixed(1)} ${cpx.toFixed(1)},${p.y.toFixed(1)} ${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+    })
+    .join(" ");
+
+  const areaPath = `${linePath} L${(W - PAD_X).toFixed(1)},${H} L${PAD_X},${H} Z`;
+
+  return (
+    <svg
+      width="100%"
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      aria-hidden
+      style={{ display: "block", overflow: "visible" }}
+    >
+      <defs>
+        <linearGradient id={`sg-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"   stopColor={color} stopOpacity="0.28" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.02" />
+        </linearGradient>
+        <linearGradient id={`sl-${uid}`} x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%"   stopColor={color} stopOpacity="0.4" />
+          <stop offset="100%" stopColor={color} stopOpacity="1"   />
+        </linearGradient>
+      </defs>
+      {/* Area fill */}
+      <path d={areaPath} fill={`url(#sg-${uid})`} />
+      {/* Line */}
+      <path d={linePath} fill="none" stroke={`url(#sl-${uid})`} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      {/* End dot */}
+      {pts.length > 0 && (
+        <>
+          <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="3.5" fill={color} opacity="0.9" />
+          <circle cx={pts[pts.length - 1].x} cy={pts[pts.length - 1].y} r="6" fill={color} opacity="0.18" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+// ── MetricIcon ────────────────────────────────────────────────────────────────
+
 function MetricIcon({ metric }: { metric: OverviewDisplayMetricKey }) {
-  const cls = "h-4 w-4";
+  const cls = "h-4.5 w-4.5";
   switch (metric) {
     case "users":
       return (
@@ -149,41 +214,7 @@ function MetricIcon({ metric }: { metric: OverviewDisplayMetricKey }) {
   }
 }
 
-function MiniBarChart({ values, color }: { values: number[]; color: string }) {
-  const w = 100;
-  const h = 36;
-  const mid = h / 2;
-  const maxSpan = mid - 6;
-  const n = values.length;
-  const gap = 2;
-  const barW = (w - 16 - gap * (n - 1)) / n;
-  let x = 8;
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0 text-zinc-600" aria-hidden>
-      <line x1={6} y1={mid} x2={w - 4} y2={mid} stroke="currentColor" strokeWidth={1} opacity={0.45} />
-      <path d={`M 4 ${mid} L 6 ${mid - 3} L 6 ${mid + 3} Z`} fill="currentColor" opacity={0.35} />
-      {values.map((v, i) => {
-        const height = Math.abs(v) * maxSpan;
-        const top = v >= 0 ? mid - height : mid;
-        const el = (
-          <rect
-            key={i}
-            x={x}
-            y={top}
-            width={barW}
-            height={Math.max(height, v === 0 ? 2 : height)}
-            rx={Math.min(barW / 2, 3)}
-            ry={Math.min(barW / 2, 3)}
-            fill={color}
-          />
-        );
-        x += barW + gap;
-        return el;
-      })}
-    </svg>
-  );
-}
+// ── KpiCardShell ──────────────────────────────────────────────────────────────
 
 function KpiCardShell({
   title,
@@ -203,137 +234,224 @@ function KpiCardShell({
   metricKey: OverviewDisplayMetricKey;
   prev: number;
   curr: number;
-  /** When set (with `trendCurr`), drives sparkline and “vs prior” instead of `prev`/`curr`. */
   trendPrev?: number;
   trendCurr?: number;
 }) {
   const tp = trendPrev ?? prev;
   const tc = trendCurr ?? curr;
-  const bars = useMemo(() => barSeriesFromCounts(tp, tc), [tp, tc]);
+  const sparkValues = useMemo(() => sparkSeries(tp, tc), [tp, tc]);
   const trend = useMemo(() => pctChangeLabel(tp, tc), [tp, tc]);
 
   return (
-    <div className="monocle-glass-card min-w-0 rounded-xl p-3.5">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+    <div
+      className="group relative flex min-w-0 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-[#1a1a1a] transition-all duration-200 hover:border-white/[0.12] hover:bg-[#1e1e1e]"
+      style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.35), 0 8px 24px -12px rgba(0,0,0,0.4)" }}
+    >
+      {/* Subtle top accent line */}
+      <div
+        className="absolute inset-x-0 top-0 h-px opacity-60"
+        style={{ background: `linear-gradient(90deg, transparent, ${theme.hex}55, transparent)` }}
+        aria-hidden
+      />
+
+      {/* Card body */}
+      <div className="flex flex-1 flex-col gap-0 px-4 pt-4 pb-0">
+
+        {/* Top row: value + icon */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            {loading ? (
+              <>
+                <div className="h-8 w-24 animate-pulse rounded-lg bg-white/[0.07]" />
+                <div className="mt-2 h-3.5 w-16 animate-pulse rounded bg-white/[0.05]" />
+              </>
+            ) : (
+              <>
+                <p className="text-xl font-bold tabular-nums tracking-tight text-[#f0f0f0] leading-none">
+                  {valueDisplay}
+                </p>
+                <p className="mt-1 text-[10px] font-medium text-[#5a5a5a] uppercase tracking-widest">
+                  {title}
+                </p>
+              </>
+            )}
+          </div>
+
+          {/* Icon */}
+          <div
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ring-1 ${theme.iconWrap} ${theme.iconRing}`}
+            style={{ color: theme.hex }}
+            aria-hidden
+          >
+            <MetricIcon metric={metricKey} />
+          </div>
+        </div>
+
+        {/* Delta badge */}
+        <div className="mt-3 flex items-center gap-2">
           {loading ? (
-            <>
-              <div className="h-7 w-20 animate-pulse rounded-md bg-zinc-800/90" />
-              <div className="mt-1.5 h-3 w-24 animate-pulse rounded bg-zinc-800/70" />
-            </>
+            <div className="h-5 w-16 animate-pulse rounded-full bg-white/[0.07]" />
           ) : (
             <>
-              <p className="text-xl font-bold tabular-nums tracking-tight text-zinc-200">{valueDisplay}</p>
-              <p className="mt-0.5 text-[11px] font-medium leading-tight text-zinc-500">{title}</p>
+              <span
+                className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-white/[0.05] ${theme.badge} ${theme.badgeText}`}
+              >
+                {trend.flat ? (
+                  <span>0%</span>
+                ) : (
+                  <>
+                    {trend.up ? (
+                      <svg className="h-2.5 w-2.5" viewBox="0 0 12 12" fill="none" aria-hidden>
+                        <path d="M2 8L6 3l4 5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    ) : (
+                      <svg className="h-2.5 w-2.5" viewBox="0 0 12 12" fill="none" aria-hidden>
+                        <path d="M2 4L6 9l4-5" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                    {trend.pct}
+                  </>
+                )}
+              </span>
+              <span className="text-[10px] text-[#3a3a3a]">vs prior period</span>
             </>
           )}
-        </div>
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-2 ring-black/40 ${theme.iconWrap} ${theme.iconRing}`}
-          style={{ color: theme.hex }}
-          aria-hidden
-        >
-          <MetricIcon metric={metricKey} />
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          {loading ? (
-            <div className="h-6 w-[4.5rem] animate-pulse rounded-full bg-zinc-800/90" />
-          ) : (
-            <span
-              className={`inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ring-white/[0.05] ${theme.badge} ${theme.badgeText}`}
-            >
-              {trend.flat ? (
-                <span>0%</span>
-              ) : (
-                <>
-                  {trend.up ? (
-                    <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
-                      <path d="M2 8L6 3l4 5" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  ) : (
-                    <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none" aria-hidden>
-                      <path d="M2 4L6 9l4-5" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                  {trend.pct}
-                </>
-              )}
-            </span>
-          )}
-          {!loading && <span className="text-[10px] text-zinc-600">vs prior</span>}
-        </div>
+      {/* Sparkline — flush to card edges */}
+      <div className="mt-3 w-full" style={{ height: 48 }}>
         {loading ? (
-          <div className="h-9 w-[100px] animate-pulse rounded-md bg-zinc-800/70" />
+          <div className="h-full animate-pulse bg-white/[0.03]" />
         ) : (
-          <MiniBarChart values={bars} color={theme.hex} />
+          <SparkAreaChart values={sparkValues} color={theme.hex} hexDim={theme.hexDim} />
         )}
       </div>
     </div>
   );
 }
 
+// ── Chart tooltip style ───────────────────────────────────────────────────────
+const TOOLTIP_STYLE = {
+  background: "#242424",
+  border: "1px solid rgba(255,255,255,0.10)",
+  borderRadius: 8,
+  fontSize: 12,
+  color: "#f0f0f0",
+};
+
+function fmtTick(v: number): string {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+  // Show exact numbers with comma separators — no rounding to k
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(v);
+}
+
+function fmtDay(d: string): string {
+  try {
+    return new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  } catch { return d; }
+}
+
+// ── DashboardMain ─────────────────────────────────────────────────────────────
+
+function fmtDate(d: string) {
+  try {
+    return new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+  } catch { return d; }
+}
+
 export default function DashboardMain() {
   const today = toYmd(new Date());
 
   const [from, setFrom] = useState(RANGE_ALL_FROM);
-  const [to, setTo] = useState(today);
-  const [counts, setCounts] = useState<OverviewCounts | null>(null);
+  const [to, setTo]     = useState(today);
+  const [counts,     setCounts]     = useState<OverviewCounts | null>(null);
   const [prevCounts, setPrevCounts] = useState<OverviewCounts | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
+
+  // Actual DB data range
+  const [dbEarliest, setDbEarliest] = useState<string | null>(null);
+  const [dbLatest,   setDbLatest]   = useState<string | null>(null);
+
+  // Chart data
+  const [trendRows,   setTrendRows]   = useState<TrendRow[]>([]);
+  const [channelRows, setChannelRows] = useState<ChannelRow[]>([]);
+  const [chartsLoading, setChartsLoading] = useState(true);
+
+  // Fetch actual DB date range once on mount
+  useEffect(() => {
+    fetch("/api/overview/range", { credentials: "same-origin" })
+      .then((r) => r.json())
+      .then((body: { earliest?: string | null; latest?: string | null }) => {
+        if (body.earliest) setDbEarliest(body.earliest);
+        if (body.latest)   setDbLatest(body.latest);
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setChartsLoading(true);
     setError(null);
     const prev = previousRange(from, to);
+    const qs = (path: string) =>
+      fetch(`/api/overview/${path}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`, {
+        credentials: "same-origin",
+      });
     const q = (f: string, t: string) =>
       fetch(`/api/overview/counts?from=${encodeURIComponent(f)}&to=${encodeURIComponent(t)}`, {
         credentials: "same-origin",
       });
-
     try {
-      const [resCur, resPrev] = await Promise.all([q(from, to), q(prev.from, prev.to)]);
-      const bodyCur = (await resCur.json()) as OverviewCountsResponse & { error?: string };
+      const [resCur, resPrev, resTrend, resCh] = await Promise.all([
+        q(from, to), q(prev.from, prev.to),
+        qs("trend"), qs("channels"),
+      ]);
+      const bodyCur  = (await resCur.json())  as OverviewCountsResponse & { error?: string };
       const bodyPrev = (await resPrev.json()) as OverviewCountsResponse & { error?: string };
-
-      if (!resCur.ok) throw new Error(bodyCur.error || resCur.statusText);
+      if (!resCur.ok)  throw new Error(bodyCur.error  || resCur.statusText);
       if (!resPrev.ok) throw new Error(bodyPrev.error || resPrev.statusText);
-
       setCounts(bodyCur.counts);
       setPrevCounts(bodyPrev.counts);
+
+      const bodyTrend = await resTrend.json() as { rows?: TrendRow[] };
+      const bodyCh    = await resCh.json()    as { rows?: ChannelRow[] };
+      setTrendRows(bodyTrend.rows ?? []);
+      setChannelRows(bodyCh.rows ?? []);
     } catch (e) {
       setCounts(null);
       setPrevCounts(null);
       setError(e instanceof Error ? e.message : "Could not load metrics");
     } finally {
       setLoading(false);
+      setChartsLoading(false);
     }
   }, [from, to]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   const applyPreset = (days: number | "all") => {
     const end = toYmd(new Date());
-    if (days === "all") {
-      setFrom(RANGE_ALL_FROM);
-      setTo(end);
-      return;
-    }
+    if (days === "all") { setFrom(RANGE_ALL_FROM); setTo(end); return; }
     setFrom(shiftDays(end, -days));
     setTo(end);
   };
 
+  // Exact number formatting — no rounding, just locale commas
   const nf = useMemo(() => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }), []);
 
   return (
-    <div className="space-y-6 p-5 lg:p-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-zinc-50 sm:text-2xl">Overview</h1>
+    <div className="space-y-4 p-4 lg:p-6">
+
+      {/* Header row */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#f0f0f0]">Overview</h1>
+          <p className="mt-0.5 text-xs text-[#4a4a4a]">Platform metrics across all time ranges</p>
+        </div>
+
+        {/* Filter bar */}
         <div className="w-max max-w-full">
           <div
             className="monocle-glass-filter inline-flex flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl px-3 py-2"
@@ -348,7 +466,7 @@ export default function DashboardMain() {
               >
                 All
               </button>
-              {([7, 30, 90] as const).map((d) => (
+              {([7, 30] as const).map((d) => (
                 <button
                   key={d}
                   type="button"
@@ -359,34 +477,26 @@ export default function DashboardMain() {
                 </button>
               ))}
             </div>
-            <span className="hidden h-5 w-px shrink-0 bg-zinc-600/60 sm:block" aria-hidden />
+            <span className="hidden h-5 w-px shrink-0 bg-white/[0.07] sm:block" aria-hidden />
             <div className="flex flex-wrap items-center gap-2">
               <label className="flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">From</span>
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4a4a4a]">From</span>
                 <input
-                  type="date"
-                  value={from}
-                  max={to}
-                  min={RANGE_ALL_FROM}
+                  type="date" value={from} max={to} min={DATA_START}
                   onChange={(e) => setFrom(e.target.value)}
                   className="h-8 max-w-[9.25rem] rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 text-xs text-[#f0f0f0] outline-none transition focus:border-violet-500/40 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)]"
                 />
               </label>
               <label className="flex items-center gap-1.5">
-                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#5a5a5a]">To</span>
+                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#4a4a4a]">To</span>
                 <input
-                  type="date"
-                  value={to}
-                  min={from}
-                  max={today}
+                  type="date" value={to} min={from} max={today}
                   onChange={(e) => setTo(e.target.value)}
                   className="h-8 max-w-[9.25rem] rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 text-xs text-[#f0f0f0] outline-none transition focus:border-violet-500/40 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)]"
                 />
               </label>
               <button
-                type="button"
-                onClick={() => void load()}
-                disabled={loading}
+                type="button" onClick={() => void load()} disabled={loading}
                 className="h-8 shrink-0 rounded-lg bg-violet-600 px-3.5 text-xs font-semibold tracking-wide text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:bg-violet-500 disabled:opacity-40"
               >
                 {loading ? "…" : "Apply"}
@@ -396,14 +506,27 @@ export default function DashboardMain() {
         </div>
       </div>
 
-      {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-950/35 px-4 py-3 text-sm text-red-200">{error}</div>
+      {/* Data availability note — small inline chip */}
+      {(dbEarliest || dbLatest) && (
+        <div className="flex items-center">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1 text-[11px] text-[#5a5a5a]">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-400/60 shrink-0" aria-hidden />
+            Data available from{" "}
+            <span className="font-medium text-[#8a8a8a]">{dbEarliest ? fmtDate(dbEarliest) : "—"}</span>
+            {" "}to{" "}
+            <span className="font-medium text-[#8a8a8a]">{dbLatest ? fmtDate(dbLatest) : "—"}</span>
+          </span>
+        </div>
       )}
 
-      <div
-        className="grid gap-3"
-        style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 200px), 1fr))" }}
-      >
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-950/35 px-4 py-3 text-sm text-red-200">
+          {error}
+        </div>
+      )}
+
+      {/* Metric grid — 2 col mobile, 3 col md, 6 col xl */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {METRIC_ROWS.map(({ key, title, trendKey }) => {
           const curr = counts?.[key] ?? 0;
           const prev = prevCounts?.[key] ?? 0;
@@ -423,6 +546,117 @@ export default function DashboardMain() {
           );
         })}
       </div>
+
+      {/* ── Chart row ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+
+
+        {/* 1. Calls + Questions trend — takes 2/3 width */}
+        <div className="lg:col-span-2 rounded-2xl border border-white/[0.07] bg-[#1a1a1a] p-4"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.35)" }}>
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-[#f0f0f0]">Activity Trend</h2>
+              <p className="text-[11px] text-[#4a4a4a] mt-0.5">Calls &amp; questions over selected period</p>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-[#5a5a5a]">
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#60a5fa] inline-block"/>Calls</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#a78bfa] inline-block"/>Questions</span>
+            </div>
+          </div>
+          {chartsLoading ? (
+            <div className="h-36 animate-pulse rounded-xl bg-white/[0.03]" />
+          ) : trendRows.length === 0 ? (
+            <div className="flex h-36 items-center justify-center text-xs text-[#3a3a3a]">No data for this range</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={150}>
+              <AreaChart data={trendRows.map(r => ({ ...r, day: fmtDay(r.day) }))}
+                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="gCalls" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"   stopColor="#60a5fa" stopOpacity={0.25}/>
+                    <stop offset="95%"  stopColor="#60a5fa" stopOpacity={0.02}/>
+                  </linearGradient>
+                  <linearGradient id="gQuestions" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"   stopColor="#a78bfa" stopOpacity={0.25}/>
+                    <stop offset="95%"  stopColor="#a78bfa" stopOpacity={0.02}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false}/>
+                <XAxis dataKey="day" stroke="transparent" tick={{ fill: "#4a4a4a", fontSize: 10 }}
+                  tickLine={false} interval="preserveStartEnd"/>
+                <YAxis stroke="transparent" tick={{ fill: "#4a4a4a", fontSize: 10 }}
+                  tickLine={false} axisLine={false} tickFormatter={fmtTick} width={32}/>
+                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [fmtTick(Number(v))]}
+                  cursor={{ stroke: "rgba(255,255,255,0.06)" }}/>
+                <Area type="monotone" dataKey="calls" stroke="#60a5fa" strokeWidth={1.8}
+                  fill="url(#gCalls)" dot={false}/>
+                <Area type="monotone" dataKey="questions" stroke="#a78bfa" strokeWidth={1.8}
+                  fill="url(#gQuestions)" dot={false}/>
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* 2. Questions by Channel — 1/3 width */}
+        <div className="rounded-2xl border border-white/[0.07] bg-[#1a1a1a] p-4"
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.35)" }}>
+          <div className="mb-3">
+            <h2 className="text-sm font-semibold text-[#f0f0f0]">Questions by Channel</h2>
+            <p className="text-[11px] text-[#4a4a4a] mt-0.5">Voice vs Chat breakdown</p>
+          </div>
+          {chartsLoading ? (
+            <div className="h-36 animate-pulse rounded-xl bg-white/[0.03]" />
+          ) : channelRows.length === 0 ? (
+            <div className="flex h-36 items-center justify-center text-xs text-[#3a3a3a]">No data</div>
+          ) : (
+            <>
+              <ResponsiveContainer width="100%" height={110}>
+                <BarChart data={channelRows} layout="vertical"
+                  margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false}/>
+                  <XAxis type="number" stroke="transparent"
+                    tick={{ fill: "#4a4a4a", fontSize: 10 }} tickLine={false}
+                    axisLine={false} tickFormatter={fmtTick}/>
+                  <YAxis type="category" dataKey="channel" stroke="transparent"
+                    tick={{ fill: "#c0c0c0", fontSize: 12 }} tickLine={false} width={44}/>
+                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [fmtTick(Number(v)), "Questions"]}
+                    cursor={{ fill: "rgba(255,255,255,0.03)" }}/>
+                  <Bar dataKey="questions" radius={[0, 6, 6, 0]} maxBarSize={28}>
+                    {channelRows.map((r, i) => (
+                      <Cell key={i} fill={i === 0 ? "#a78bfa" : "#60a5fa"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+              {/* Legend with % split */}
+              {channelRows.length >= 2 && (() => {
+                const total = channelRows.reduce((s, r) => s + r.questions, 0);
+                return (
+                  <div className="mt-4 flex flex-col gap-2">
+                    {channelRows.map((r, i) => (
+                      <div key={r.channel} className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full inline-block flex-shrink-0"
+                            style={{ background: i === 0 ? "#a78bfa" : "#60a5fa" }}/>
+                          <span className="text-[#a0a0a0]">{r.channel}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#f0f0f0] font-medium tabular-nums">{fmtTick(r.questions)}</span>
+                          <span className="text-[#4a4a4a] tabular-nums">
+                            {total > 0 ? `${((r.questions / total) * 100).toFixed(0)}%` : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+        </div>
+      </div>
+
     </div>
   );
 }

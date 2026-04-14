@@ -1,5 +1,7 @@
 import "./globals.css";
-import "@copilotkit/react-ui/styles.css";
+/* @copilotkit/react-ui/styles.css removed — we use a fully custom chat UI
+   and don't need the default CopilotKit styles (which also inject the
+   floating diamond button we don't want). */
 import type { Metadata } from "next";
 import OpeningAnimationHost from "@/components/OpeningAnimationHost";
 import { PRODUCT_DESCRIPTION, PRODUCT_LINE } from "@/lib/brand";

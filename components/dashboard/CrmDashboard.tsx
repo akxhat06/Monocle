@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import DashboardMain from "@/components/dashboard/DashboardMain";
 import DashboardSidebar from "@/components/dashboard/DashboardSidebar";
+import AnalyticsPage from "@/components/dashboard/AnalyticsPage";
+import PlatformPage from "@/components/dashboard/PlatformPage";
 import { useDashboardAction } from "@/components/actions/useDashboardAction";
 import MonocleChat from "@/components/copilot/MonocleChat";
 
@@ -11,6 +13,7 @@ const SIDEBAR_COLLAPSED_KEY = "monocle-sidebar-collapsed";
 
 export default function CrmDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [activeNav, setActiveNav] = useState("overview");
   const [chatOpen, setChatOpen] = useState(false);
   const [botHover, setBotHover] = useState(false);
 
@@ -34,15 +37,17 @@ export default function CrmDashboard() {
   return (
     <div className="flex h-screen overflow-hidden text-zinc-100">
       <DashboardSidebar
-        activeId="overview"
+        activeId={activeNav}
         collapsed={sidebarCollapsed}
-        onNavigate={() => {}}
+        onNavigate={setActiveNav}
         onToggleCollapse={toggleSidebar}
       />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <DashboardHeader />
         <main className="min-h-0 flex-1 overflow-y-auto">
-          <DashboardMain />
+          {(activeNav === "overview") && <DashboardMain />}
+          {(activeNav === "calls" || activeNav === "questions") && <AnalyticsPage />}
+          {(activeNav === "asr" || activeNav === "tts") && <PlatformPage />}
         </main>
       </div>
 
