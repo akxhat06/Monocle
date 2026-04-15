@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useSound } from "@/lib/hooks/useSound";
 import {
   AreaChart, Area, BarChart, Bar, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -381,6 +382,15 @@ export default function DashboardMain() {
   const [trendRows,   setTrendRows]   = useState<TrendRow[]>([]);
   const [channelRows, setChannelRows] = useState<ChannelRow[]>([]);
   const [chartsLoading, setChartsLoading] = useState(true);
+
+  const { startThinking, stopThinking } = useSound();
+  const prevLoadingRef = useRef(false);
+
+  useEffect(() => {
+    if (!prevLoadingRef.current && loading) startThinking();
+    else if (prevLoadingRef.current && !loading) stopThinking();
+    prevLoadingRef.current = loading;
+  }, [loading, startThinking, stopThinking]);
 
   // Fetch actual DB date range once on mount
   useEffect(() => {

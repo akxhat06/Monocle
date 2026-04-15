@@ -9,6 +9,7 @@ import DashboardRenderer from "@/components/DashboardRenderer";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { DashboardSchema } from "@/lib/schemas/dashboard";
 import { useNotificationStore } from "@/store/notifications";
+import { useSound } from "@/lib/hooks/useSound";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -405,6 +406,7 @@ export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: b
   useCopilotAdditionalInstructions({ instructions: SYSTEM_PROMPT }, []);
 
   const addNotification = useNotificationStore((s) => s.add);
+  const { play, startThinking, stopThinking } = useSound();
 
   const { messages, sendMessage, isLoading, stopGeneration } =
     useCopilotChatInternal();
@@ -418,6 +420,16 @@ export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: b
   const [completedTurns, setCompletedTurns] = useState<Turn[]>([]);
   const currentUserMsgRef = useRef<string>("");
   const prevIsLoadingRef = useRef(false);
+
+  // Sound effects tied to loading state
+  useEffect(() => {
+    if (!prevIsLoadingRef.current && isLoading) {
+      startThinking();
+    } else if (prevIsLoadingRef.current && !isLoading) {
+      stopThinking();
+      play("complete");
+    }
+  }, [isLoading, startThinking, stopThinking, play]);
 
   // When loading finishes, snapshot the just-completed turn
   useEffect(() => {
@@ -483,6 +495,7 @@ export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: b
       const trimmed = text.trim();
       if (!trimmed || sendingRef.current) return;
       sendingRef.current = true;
+      play("send");
       setInput("");
       if (textareaRef.current) textareaRef.current.style.height = "auto";
       currentUserMsgRef.current = trimmed;

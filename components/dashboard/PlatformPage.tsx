@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+// tab is now driven by the sidebar — no internal tab state needed
 import DataTable, { ColDef } from "@/components/tables/DataTable";
 import { shiftDays, toYmd } from "@/lib/overview/date-range";
 
@@ -118,91 +119,49 @@ function RangeBar({
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-type Tab = "asr" | "tts";
+const META = {
+  asr: { title: "ASR Details",  desc: "Automatic Speech Recognition logs", endpoint: "/api/table/asr" },
+  tts: { title: "TTS Details",  desc: "Text-to-Speech synthesis logs",     endpoint: "/api/table/tts" },
+};
 
-export default function PlatformPage() {
+export default function PlatformPage({ tab }: { tab: "asr" | "tts" }) {
   const today = toYmd(new Date());
-  const [tab, setTab]         = useState<Tab>("asr");
   const [from, setFrom]       = useState(DATA_START);
   const [to, setTo]           = useState(today);
   const [applied, setApplied] = useState({ from: DATA_START, to: today });
   const [successFilter, setSuccessFilter] = useState("");
 
-  const TABS: { id: Tab; label: string; desc: string }[] = [
-    { id: "asr", label: "ASR", desc: "Automatic Speech Recognition logs" },
-    { id: "tts", label: "TTS", desc: "Text-to-Speech synthesis logs"     },
-  ];
-
-  const current = TABS.find((t) => t.id === tab)!;
+  const { title, desc, endpoint } = META[tab];
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Tab bar */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-white/[0.05] px-5 pt-4 pb-0">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" onClick={() => setTab(t.id)}
-            className={`relative px-3 pb-3 pt-1 text-[13px] font-medium transition
-              ${tab === t.id ? "text-[#f0f0f0]" : "text-[#7a7a7a] hover:text-[#c0c0c0]"}`}>
-            {t.label}
-            {tab === t.id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-violet-400" />
-            )}
-          </button>
-        ))}
-      </div>
-
       {/* Date range bar */}
       <RangeBar from={from} to={to} setFrom={setFrom} setTo={setTo}
         onApply={() => setApplied({ from, to })} />
 
       {/* Table */}
       <div className="min-h-0 flex-1">
-        {tab === "asr" && (
-          <DataTable<ASRRow>
-            title="ASR Details" subtitle={current.desc}
-            endpoint="/api/table/asr"
-            columns={ASR_COLS}
-            from={applied.from} to={applied.to}
-            defaultParams={successFilter ? { success: successFilter } : {}}
-            extraFilters={
-              <div className="flex items-center gap-1">
-                {(["", "true", "false"] as const).map((s) => (
-                  <button key={s} type="button"
-                    onClick={() => setSuccessFilter(s)}
-                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition
-                      ${successFilter === s
-                        ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
-                        : "border-white/[0.07] bg-white/[0.03] text-[#8a8a8a] hover:text-[#c0c0c0]"}`}>
-                    {s === "" ? "All" : s === "true" ? "Success" : "Failed"}
-                  </button>
-                ))}
-              </div>
-            }
-          />
-        )}
-        {tab === "tts" && (
-          <DataTable<TTSRow>
-            title="TTS Details" subtitle={current.desc}
-            endpoint="/api/table/tts"
-            columns={TTS_COLS}
-            from={applied.from} to={applied.to}
-            defaultParams={successFilter ? { success: successFilter } : {}}
-            extraFilters={
-              <div className="flex items-center gap-1">
-                {(["", "true", "false"] as const).map((s) => (
-                  <button key={s} type="button"
-                    onClick={() => setSuccessFilter(s)}
-                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition
-                      ${successFilter === s
-                        ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
-                        : "border-white/[0.07] bg-white/[0.03] text-[#8a8a8a] hover:text-[#c0c0c0]"}`}>
-                    {s === "" ? "All" : s === "true" ? "Success" : "Failed"}
-                  </button>
-                ))}
-              </div>
-            }
-          />
-        )}
+        <DataTable<ASRRow>
+          title={title} subtitle={desc}
+          endpoint={endpoint}
+          columns={tab === "asr" ? ASR_COLS : TTS_COLS}
+          from={applied.from} to={applied.to}
+          defaultParams={successFilter ? { success: successFilter } : {}}
+          extraFilters={
+            <div className="flex items-center gap-1">
+              {(["", "true", "false"] as const).map((s) => (
+                <button key={s} type="button"
+                  onClick={() => setSuccessFilter(s)}
+                  className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium transition
+                    ${successFilter === s
+                      ? "border-violet-500/30 bg-violet-500/10 text-violet-300"
+                      : "border-white/[0.07] bg-white/[0.03] text-[#8a8a8a] hover:text-[#c0c0c0]"}`}>
+                  {s === "" ? "All" : s === "true" ? "Success" : "Failed"}
+                </button>
+              ))}
+            </div>
+          }
+        />
       </div>
     </div>
   );

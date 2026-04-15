@@ -8,6 +8,8 @@ import AnalyticsPage from "@/components/dashboard/AnalyticsPage";
 import PlatformPage from "@/components/dashboard/PlatformPage";
 import { useDashboardAction } from "@/components/actions/useDashboardAction";
 import MonocleChat from "@/components/copilot/MonocleChat";
+import ErrorsPage from "@/components/dashboard/ErrorsPage";
+import { useSound } from "@/lib/hooks/useSound";
 
 const SIDEBAR_COLLAPSED_KEY = "monocle-sidebar-collapsed";
 
@@ -17,6 +19,8 @@ export default function CrmDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatFullscreen, setChatFullscreen] = useState(false);
   const [botHover, setBotHover] = useState(false);
+
+  const { play } = useSound();
 
   // Register the render_dashboard generative-UI action (must be inside CopilotKit)
   useDashboardAction();
@@ -46,9 +50,10 @@ export default function CrmDashboard() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <DashboardHeader />
         <main className="min-h-0 flex-1 overflow-y-auto">
-          {(activeNav === "overview") && <DashboardMain />}
-          {(activeNav === "calls" || activeNav === "questions") && <AnalyticsPage />}
-          {(activeNav === "asr" || activeNav === "tts") && <PlatformPage />}
+          {activeNav === "overview"   && <DashboardMain />}
+          {(activeNav === "calls" || activeNav === "questions") && <AnalyticsPage tab={activeNav} />}
+          {activeNav === "errors"     && <ErrorsPage />}
+          {(activeNav === "asr" || activeNav === "tts") && <PlatformPage tab={activeNav} />}
         </main>
       </div>
 
@@ -96,7 +101,7 @@ export default function CrmDashboard() {
             {/* Close button */}
             <button
               type="button"
-              onClick={() => { setChatOpen(false); setChatFullscreen(false); }}
+              onClick={() => { play("toggle-off"); setChatOpen(false); setChatFullscreen(false); }}
               className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-[#6b6b6b] transition hover:bg-white/[0.08] hover:text-[#c0c0c0]"
               aria-label="Close AI assistant"
             >
@@ -115,11 +120,11 @@ export default function CrmDashboard() {
 
       {/* ── Floating bot button ────────────────────────────────────────────── */}
       {!chatOpen && (
-        <div className="pointer-events-none fixed bottom-8 right-8 z-50">
+        <div className="pointer-events-none fixed bottom-8 right-8 z-30">
           <button
             type="button"
             className="pointer-events-auto relative flex cursor-pointer flex-col items-center border-0 bg-transparent p-0 transition hover:scale-[1.03]"
-            onClick={() => setChatOpen(true)}
+            onClick={() => { play("toggle-on"); setChatOpen(true); }}
             onMouseEnter={() => setBotHover(true)}
             onMouseLeave={() => setBotHover(false)}
             aria-label="Open AI assistant"

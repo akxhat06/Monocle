@@ -148,37 +148,15 @@ function RangeBar({
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
-type Tab = "calls" | "questions";
-
-export default function AnalyticsPage() {
+export default function AnalyticsPage({ tab }: { tab: "calls" | "questions" }) {
   const today = toYmd(new Date());
-  const [tab, setTab]       = useState<Tab>("calls");
-  const [from, setFrom]     = useState(DATA_START);
-  const [to, setTo]         = useState(today);
+  const [from, setFrom]       = useState(DATA_START);
+  const [to, setTo]           = useState(today);
   const [applied, setApplied] = useState({ from: DATA_START, to: today });
   const [channelFilter, setChannelFilter] = useState("");
 
-  const TABS: { id: Tab; label: string }[] = [
-    { id: "calls",     label: "Calls"     },
-    { id: "questions", label: "Questions" },
-  ];
-
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Tab bar */}
-      <div className="flex shrink-0 items-center gap-1 border-b border-white/[0.05] px-5 pt-4 pb-0">
-        {TABS.map((t) => (
-          <button key={t.id} type="button" onClick={() => setTab(t.id)}
-            className={`relative px-3 pb-3 pt-1 text-[13px] font-medium transition
-              ${tab === t.id ? "text-[#f0f0f0]" : "text-[#7a7a7a] hover:text-[#c0c0c0]"}`}>
-            {t.label}
-            {tab === t.id && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-violet-400" />
-            )}
-          </button>
-        ))}
-      </div>
-
       {/* Date range bar */}
       <RangeBar from={from} to={to} setFrom={setFrom} setTo={setTo}
         onApply={() => setApplied({ from, to })} loading={false} />
