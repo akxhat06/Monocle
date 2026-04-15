@@ -19,6 +19,7 @@ export type TableWidget = {
   title?: string;
   columns: string[];
   rows: Array<Record<string, unknown>>;
+  pageSize?: number;
 };
 
 export type BarWidget = {
@@ -91,6 +92,7 @@ const TableWidgetSchema = z.object({
   title: z.string().optional(),
   columns: z.array(z.string()),
   rows: z.array(z.record(z.string(), z.unknown())),
+  pageSize: z.number().int().min(1).max(100).optional(),
 });
 
 // Shared chart fields

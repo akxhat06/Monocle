@@ -400,7 +400,7 @@ const SUGGESTIONS = [
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export default function MonocleChat() {
+export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: boolean }) {
   useCopilotAdditionalInstructions({ instructions: SYSTEM_PROMPT }, []);
 
   const { messages, sendMessage, isLoading, stopGeneration } =
@@ -539,159 +539,170 @@ export default function MonocleChat() {
   const showStepper = isLoading;
   const showEmptyState = completedTurns.length === 0 && !pendingUserMsg && !isLoading;
 
+  // In fullscreen, all content is centered in a max-width column
+  const fsCol = isFullscreen ? "w-full max-w-3xl mx-auto" : "";
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       {/* ── Message list ─────────────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-3 scroll-smooth">
+      <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
+        <div className={`${fsCol} px-4 py-4 space-y-3`}>
 
-        {/* ── Empty state ──────────────────────────────────────────────── */}
-        {showEmptyState && (
-          <div className="flex flex-col gap-5 pb-2 pt-2">
+          {/* ── Empty state ──────────────────────────────────────────────── */}
+          {showEmptyState && (
+            <div className={`flex flex-col pb-2 ${isFullscreen ? "gap-8 pt-12 items-center" : "gap-5 pt-2"}`}>
 
-            {/* Brand + headline */}
-            <div className="flex flex-col items-center gap-3 pt-2">
-              <MonocleMarkAnimated size={44} title="Monocle AI" />
-              <div className="text-center">
-                <p className="text-sm font-semibold text-[#e0e0e0] leading-snug">Monocle AI</p>
-                <p className="mt-1 text-[11px] text-[#c0c0c0] leading-relaxed max-w-[220px]">
-                  Ask questions in plain language — I&apos;ll query your data and build a live dashboard instantly.
-                </p>
-              </div>
-            </div>
-
-            {/* What I can do */}
-            <div className="flex flex-col gap-2">
-              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#b0b0b0] px-0.5">What I can do</p>
-              {[
-                {
-                  icon: (
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-                    </svg>
-                  ),
-                  title: "Build live dashboards",
-                  desc: "Charts, KPIs, and tables generated from your real data",
-                },
-                {
-                  icon: (
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
-                    </svg>
-                  ),
-                  title: "Query any metric",
-                  desc: "Calls, questions, ASR/TTS latency, errors, user trends",
-                },
-                {
-                  icon: (
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
-                    </svg>
-                  ),
-                  title: "Filter by date range",
-                  desc: "Compare this week vs last week, month-over-month, custom ranges",
-                },
-                {
-                  icon: (
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                    </svg>
-                  ),
-                  title: "Natural language",
-                  desc: "No SQL needed — just ask like you&apos;re talking to an analyst",
-                },
-              ].map((item) => (
-                <div key={item.title} className="flex items-start gap-2.5 rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2.5">
-                  <span className="mt-0.5 shrink-0 text-violet-400">{item.icon}</span>
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-medium text-[#d0d0d0] leading-tight">{item.title}</p>
-                    <p className="mt-0.5 text-[10px] text-[#e0e0e0] leading-snug">{item.desc}</p>
-                  </div>
+              {/* Brand + headline */}
+              <div className={`flex flex-col items-center gap-4 ${isFullscreen ? "pt-4" : "pt-2"}`}>
+                <MonocleMarkAnimated size={isFullscreen ? 64 : 44} title="Monocle AI" />
+                <div className="text-center">
+                  <p className={`font-semibold text-[#e0e0e0] leading-snug ${isFullscreen ? "text-xl" : "text-sm"}`}>Monocle AI</p>
+                  <p className={`mt-1.5 text-[#c0c0c0] leading-relaxed ${isFullscreen ? "text-sm max-w-md" : "text-[11px] max-w-[220px]"}`}>
+                    Ask questions in plain language — I&apos;ll query your data and build a live dashboard instantly.
+                  </p>
                 </div>
-              ))}
+              </div>
+
+              {/* What I can do */}
+              <div className={`flex flex-col gap-2 ${isFullscreen ? "w-full" : ""}`}>
+                <p className={`font-semibold uppercase tracking-[0.14em] text-[#b0b0b0] px-0.5 ${isFullscreen ? "text-[10px] text-center mb-1" : "text-[9px]"}`}>What I can do</p>
+                <div className={isFullscreen ? "grid grid-cols-2 gap-3" : "flex flex-col gap-2"}>
+                  {[
+                    {
+                      icon: (
+                        <svg className={isFullscreen ? "h-5 w-5" : "h-3.5 w-3.5"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                        </svg>
+                      ),
+                      title: "Build live dashboards",
+                      desc: "Charts, KPIs, and tables generated from your real data",
+                    },
+                    {
+                      icon: (
+                        <svg className={isFullscreen ? "h-5 w-5" : "h-3.5 w-3.5"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                        </svg>
+                      ),
+                      title: "Query any metric",
+                      desc: "Calls, questions, ASR/TTS latency, errors, user trends",
+                    },
+                    {
+                      icon: (
+                        <svg className={isFullscreen ? "h-5 w-5" : "h-3.5 w-3.5"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                        </svg>
+                      ),
+                      title: "Filter by date range",
+                      desc: "Compare this week vs last week, month-over-month, custom ranges",
+                    },
+                    {
+                      icon: (
+                        <svg className={isFullscreen ? "h-5 w-5" : "h-3.5 w-3.5"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                        </svg>
+                      ),
+                      title: "Natural language",
+                      desc: "No SQL needed — just ask like you&apos;re talking to an analyst",
+                    },
+                  ].map((item) => (
+                    <div key={item.title} className={`flex items-start gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] ${isFullscreen ? "px-4 py-3.5" : "px-3 py-2.5"}`}>
+                      <span className={`shrink-0 text-violet-400 ${isFullscreen ? "mt-0.5" : "mt-0.5"}`}>{item.icon}</span>
+                      <div className="min-w-0">
+                        <p className={`font-medium text-[#d0d0d0] leading-tight ${isFullscreen ? "text-sm" : "text-[11px]"}`}>{item.title}</p>
+                        <p className={`mt-0.5 text-[#888] leading-snug ${isFullscreen ? "text-xs" : "text-[10px]"}`}>{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
             </div>
+          )}
 
-          </div>
-        )}
+          {/* ── Completed turns — each persists permanently ───────────────── */}
+          {completedTurns.map((turn) => (
+            <div key={turn.key} className="flex flex-col gap-2">
+              {/* User bubble */}
+              <div className="flex justify-end">
+                <div className={`rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed ${isFullscreen ? "max-w-[65%]" : "max-w-[85%]"}`}>
+                  {turn.userMsg}
+                </div>
+              </div>
+              {/* Dashboard */}
+              {turn.dashboard && (
+                <div className="w-full overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1a1a] p-3">
+                  {turn.dashboard}
+                </div>
+              )}
+              {/* Assistant text */}
+              {turn.text && (
+                <div className={`self-start rounded-2xl rounded-bl-sm border border-white/[0.07] bg-[#1f1f1f] px-3.5 py-2.5 text-sm text-[#c0c0c0] leading-relaxed ${isFullscreen ? "max-w-[75%]" : "max-w-[90%]"}`}>
+                  {renderMarkdown(turn.text)}
+                </div>
+              )}
+            </div>
+          ))}
 
-        {/* ── Completed turns — each persists permanently ───────────────── */}
-        {completedTurns.map((turn) => (
-          <div key={turn.key} className="flex flex-col gap-2">
-            {/* User bubble */}
+          {/* ── Current in-progress turn ──────────────────────────────────── */}
+          {pendingUserMsg && (
             <div className="flex justify-end">
-              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed">
-                {turn.userMsg}
+              <div className={`rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed ${isFullscreen ? "max-w-[65%]" : "max-w-[85%]"}`}>
+                {pendingUserMsg}
               </div>
             </div>
-            {/* Dashboard */}
-            {turn.dashboard && (
-              <div className="w-full overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1a1a] p-3">
-                {turn.dashboard}
-              </div>
-            )}
-            {/* Assistant text */}
-            {turn.text && (
-              <div className="max-w-[90%] self-start rounded-2xl rounded-bl-sm border border-white/[0.07] bg-[#1f1f1f] px-3.5 py-2.5 text-sm text-[#c0c0c0] leading-relaxed">
-                {renderMarkdown(turn.text)}
-              </div>
-            )}
-          </div>
-        ))}
+          )}
 
-        {/* ── Current in-progress turn ──────────────────────────────────── */}
-        {pendingUserMsg && (
-          <div className="flex justify-end">
-            <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed">
-              {pendingUserMsg}
-            </div>
-          </div>
-        )}
+          {/* ── Live stepper (while AI is running queries / building dashboard) */}
+          {showStepper && (
+            <AgentStepper steps={steps} isLoading={isLoading} />
+          )}
 
-        {/* ── Live stepper (while AI is running queries / building dashboard) */}
-        {showStepper && (
-          <AgentStepper steps={steps} isLoading={isLoading} />
-        )}
-
-        <div ref={bottomRef} />
+          <div ref={bottomRef} />
+        </div>
       </div>
 
       {/* ── Suggestion carousel — only when no conversation yet ─────────── */}
       {showEmptyState && (
-        <SuggestionCarousel suggestions={SUGGESTIONS} onSelect={(p) => void submit(p)} />
+        <div className={fsCol}>
+          <SuggestionCarousel suggestions={SUGGESTIONS} onSelect={(p) => void submit(p)} />
+        </div>
       )}
 
       {/* ── Input bar ────────────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-white/[0.06] bg-[#161616] px-3 py-2.5">
-        <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 focus-within:border-violet-500/30 focus-within:bg-white/[0.05] transition-colors">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            placeholder="Ask an analytics question…"
-            disabled={Boolean(pendingUserMsg) || isLoading}
-            className="flex-1 resize-none overflow-y-auto bg-transparent text-sm text-[#f0f0f0] placeholder:text-[#b0b0b0] outline-none disabled:opacity-40 leading-5"
-            style={{ minHeight: "20px", maxHeight: "60px" }}
-          />
-          <button
-            type="button"
-            onClick={isLoading ? stopGeneration : () => void submit(input)}
-            aria-label={isLoading ? "Stop generation" : "Send message"}
-            className="mb-0.5 shrink-0 rounded-lg p-1.5 text-violet-400 transition hover:text-violet-300 disabled:opacity-30"
-            disabled={!isLoading && !input.trim()}
-          >
-            {isLoading ? (
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden>
-                <rect x="3" y="3" width="10" height="10" rx="2" />
-              </svg>
-            ) : (
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
-                <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            )}
-          </button>
+      <div className={`shrink-0 border-t border-white/[0.06] bg-[#161616] ${isFullscreen ? "px-4 py-4" : "px-3 py-2.5"}`}>
+        <div className={`${fsCol}`}>
+          <div className={`flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 focus-within:border-violet-500/30 focus-within:bg-white/[0.05] transition-colors ${isFullscreen ? "py-3" : "py-1.5"}`}>
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={1}
+              placeholder="Ask an analytics question…"
+              disabled={Boolean(pendingUserMsg) || isLoading}
+              className="flex-1 resize-none overflow-y-auto bg-transparent text-sm text-[#f0f0f0] placeholder:text-[#b0b0b0] outline-none disabled:opacity-40 leading-5"
+              style={{ minHeight: "20px", maxHeight: isFullscreen ? "120px" : "60px" }}
+            />
+            <button
+              type="button"
+              onClick={isLoading ? stopGeneration : () => void submit(input)}
+              aria-label={isLoading ? "Stop generation" : "Send message"}
+              className="mb-0.5 shrink-0 rounded-lg p-1.5 text-violet-400 transition hover:text-violet-300 disabled:opacity-30"
+              disabled={!isLoading && !input.trim()}
+            >
+              {isLoading ? (
+                <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16" aria-hidden>
+                  <rect x="3" y="3" width="10" height="10" rx="2" />
+                </svg>
+              ) : (
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} aria-hidden>
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+          </div>
+          <p className="mt-1.5 text-center text-[10px] text-[#2a2a2a]">Powered by CopilotKit</p>
         </div>
-        <p className="mt-1.5 text-center text-[10px] text-[#2a2a2a]">Powered by CopilotKit</p>
       </div>
     </div>
   );

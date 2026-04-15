@@ -37,7 +37,7 @@ export default function DashboardRenderer({ node }: { node: LayoutNode }) {
     case "markdown":
       return <MarkdownWidget content={node.content} />;
     case "table":
-      return <DataTableWidget title={node.title} columns={node.columns} rows={node.rows} />;
+      return <DataTableWidget title={node.title} columns={node.columns} rows={node.rows} pageSize={node.pageSize} />;
     case "bar":
       return <BarChartWidget title={node.title} data={node.data} xKey={node.xKey} yKeys={node.yKeys} />;
     case "line":

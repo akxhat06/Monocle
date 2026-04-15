@@ -15,6 +15,7 @@ export default function CrmDashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeNav, setActiveNav] = useState("overview");
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatFullscreen, setChatFullscreen] = useState(false);
   const [botHover, setBotHover] = useState(false);
 
   // Register the render_dashboard generative-UI action (must be inside CopilotKit)
@@ -51,40 +52,66 @@ export default function CrmDashboard() {
         </main>
       </div>
 
-      {/* ── AI Chat Panel ──────────────────────────────────────────────────── */}
-      <aside
-        className={`relative z-10 h-full shrink-0 border-l border-white/[0.06] bg-[#161616] transition-all duration-300 ease-out ${
-          chatOpen ? "w-[540px]" : "w-0 border-l-0 overflow-hidden"
+      {/*
+        ── AI Chat Panel ───────────────────────────────────────────────────
+        Always mounted so MonocleChat never loses its state.
+        - hidden (w-0 / invisible) when chatOpen=false
+        - side drawer (w-[540px]) when chatOpen && !chatFullscreen
+        - fixed fullscreen overlay when chatOpen && chatFullscreen
+      */}
+      <div
+        className={`flex flex-col bg-[#161616] transition-all duration-300 ease-out ${
+          !chatOpen
+            ? "w-0 overflow-hidden invisible"
+            : chatFullscreen
+              ? "fixed inset-0 z-50"
+              : "relative z-10 h-full w-[540px] shrink-0 border-l border-white/[0.06]"
         }`}
         aria-hidden={!chatOpen}
       >
-        {chatOpen && (
-          <div className="flex h-full min-h-0 flex-col">
-            {/* Panel header */}
-            <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.5)]" aria-hidden />
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-[#6b6b6b]">Monocle AI</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setChatOpen(false)}
-                className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-[#6b6b6b] transition hover:bg-white/[0.08] hover:text-[#c0c0c0]"
-                aria-label="Close AI assistant"
-              >
-                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Chat UI */}
-            <div className="flex-1 min-h-0">
-              <MonocleChat />
-            </div>
+        {/* Panel header */}
+        <div className="flex shrink-0 items-center justify-between border-b border-white/[0.06] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.5)]" aria-hidden />
+            <span className="text-[11px] font-semibold uppercase tracking-widest text-[#6b6b6b]">Monocle AI</span>
           </div>
-        )}
-      </aside>
+          <div className="flex items-center gap-1.5">
+            {/* Expand / Collapse button */}
+            <button
+              type="button"
+              onClick={() => setChatFullscreen((f) => !f)}
+              className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-[#6b6b6b] transition hover:bg-white/[0.08] hover:text-[#c0c0c0]"
+              aria-label={chatFullscreen ? "Exit full screen" : "Expand to full screen"}
+            >
+              {chatFullscreen ? (
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 9L4 4m0 0h5m-5 0v5M15 9l5-5m0 0h-5m5 0v5M9 15l-5 5m0 0h5m-5 0v-5M15 15l5 5m0 0h-5m5 0v-5" />
+                </svg>
+              ) : (
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 8V4m0 0h4M4 4l5 5M20 8V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5M20 16v4m0 0h-4m4 0l-5-5" />
+                </svg>
+              )}
+            </button>
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => { setChatOpen(false); setChatFullscreen(false); }}
+              className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-[#6b6b6b] transition hover:bg-white/[0.08] hover:text-[#c0c0c0]"
+              aria-label="Close AI assistant"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Chat UI — single instance, never unmounts */}
+        <div className="flex-1 min-h-0">
+          <MonocleChat isFullscreen={chatFullscreen} />
+        </div>
+      </div>
 
       {/* ── Floating bot button ────────────────────────────────────────────── */}
       {!chatOpen && (
