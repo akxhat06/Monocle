@@ -18,6 +18,83 @@ function useClock() {
   return now;
 }
 
+// ── Multi-script character sets ───────────────────────────────────────────────
+const SCRIPTS = [
+  {
+    name: "greek",
+    chars: ["α","β","γ","δ","ε","ζ","η","θ","ι","κ","λ","μ","ν","ξ","ο","π","ρ","σ","τ","υ","φ","χ","ψ","ω"],
+    color: "#7c6f9e",
+  },
+  {
+    name: "japanese",
+    chars: ["ア","イ","ウ","エ","オ","カ","キ","ク","ケ","コ","サ","シ","ス","セ","ソ","タ","チ","ツ","テ","ト"],
+    color: "#6e8f7c",
+  },
+  {
+    name: "arabic",
+    chars: ["ا","ب","ت","ث","ج","ح","خ","د","ذ","ر","ز","س","ش","ص","ض","ط","ظ","ع","غ","ف"],
+    color: "#8f7a4e",
+  },
+  {
+    name: "korean",
+    chars: ["가","나","다","라","마","바","사","아","자","차","카","타","파","하","고","노","도","로","모","보"],
+    color: "#5a8a9f",
+  },
+];
+
+function AnimatedDate({ dateStr }: { dateStr: string }) {
+  const [visible, setVisible]       = useState(true);
+  const [altStr, setAltStr]         = useState("");
+  const [altColor, setAltColor]     = useState("#606060");
+  const [showAlt, setShowAlt]       = useState(false);
+  const tickRef                     = useRef(0);
+  const scriptIdxRef                = useRef(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      tickRef.current += 1;
+      if (tickRef.current % 3 === 0) {
+        const script = SCRIPTS[scriptIdxRef.current % SCRIPTS.length];
+        scriptIdxRef.current += 1;
+
+        // fade out
+        setVisible(false);
+        setTimeout(() => {
+          const s = Array.from({ length: dateStr.length }, (_, i) =>
+            /[a-zA-Z]/.test(dateStr[i])
+              ? script.chars[Math.floor(Math.random() * script.chars.length)]
+              : dateStr[i]
+          ).join("");
+          setAltStr(s);
+          setAltColor(script.color);
+          setShowAlt(true);
+          setVisible(true);
+        }, 280);
+
+        // fade back to date
+        setTimeout(() => {
+          setVisible(false);
+          setTimeout(() => { setShowAlt(false); setVisible(true); }, 280);
+        }, 1600);
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [dateStr]);
+
+  return (
+    <span
+      className="font-mono text-[12px] font-medium tracking-wide transition-all duration-300"
+      style={{
+        opacity: visible ? 1 : 0,
+        color: showAlt ? altColor : "#606060",
+        letterSpacing: showAlt ? "0.1em" : "0.04em",
+      }}
+    >
+      {showAlt ? altStr : dateStr}
+    </span>
+  );
+}
+
 // ── displayFromUser ───────────────────────────────────────────────────────────
 function displayFromUser(user: User): { primary: string; secondary: string; initials: string } {
   const meta = user.user_metadata ?? {};
@@ -120,14 +197,26 @@ export default function DashboardHeader() {
       </div>
 
       {/* Center — live clock */}
-      <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-2">
-        <span className="font-mono text-[13px] font-medium tabular-nums text-[#909090] tracking-wide">
-          {datePart}
-        </span>
-        <span className="h-3 w-px bg-white/[0.08]" aria-hidden />
-        <span className="font-mono text-[13px] font-semibold tabular-nums text-[#8a8a8a] tracking-widest">
-          {timePart}
-        </span>
+      <div className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-3">
+        {/* Animated date */}
+        <AnimatedDate dateStr={datePart} />
+
+        {/* Divider */}
+        <span className="h-3.5 w-px bg-white/[0.08]" aria-hidden />
+
+        {/* Time — no border, just glowing text */}
+        <div className="flex items-center gap-1.5">
+          <span className="relative flex h-1.5 w-1.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-50" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-violet-400" />
+          </span>
+          <span
+            className="font-mono text-[14px] font-semibold tabular-nums tracking-widest"
+            style={{ color: "#d0d0d0", textShadow: "0 0 12px rgba(167,139,250,0.25)" }}
+          >
+            {timePart}
+          </span>
+        </div>
       </div>
 
       {/* Right — actions + user */}

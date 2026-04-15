@@ -537,12 +537,12 @@ export default function DashboardMain() {
       {/* Data availability note — small inline chip */}
       {(dbEarliest || dbLatest) && (
         <div className="flex items-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.07] bg-white/[0.03] px-3 py-1 text-[11px] text-[#5a5a5a]">
-            <span className="h-1.5 w-1.5 rounded-full bg-violet-400/60 shrink-0" aria-hidden />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/[0.07] px-3 py-1 text-[11px] text-orange-400/70">
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-400 shrink-0" aria-hidden />
             Data available from{" "}
-            <span className="font-medium text-[#8a8a8a]">{dbEarliest ? fmtDate(dbEarliest) : "—"}</span>
+            <span className="font-semibold text-orange-300">{dbEarliest ? fmtDate(dbEarliest) : "—"}</span>
             {" "}to{" "}
-            <span className="font-medium text-[#8a8a8a]">{dbLatest ? fmtDate(dbLatest) : "—"}</span>
+            <span className="font-semibold text-orange-300">{dbLatest ? fmtDate(dbLatest) : "—"}</span>
           </span>
         </div>
       )}

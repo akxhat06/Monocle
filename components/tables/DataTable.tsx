@@ -108,8 +108,10 @@ export default function DataTable<T extends Record<string, unknown>>({
   const [error, setError]       = useState<string | null>(null);
   const [search, setSearch]     = useState("");
   const [inputVal, setInputVal] = useState("");
-  const [extraParams]           = useState<Record<string, string>>(defaultParams);
   const abortRef                = useRef<AbortController | null>(null);
+
+  // Serialise defaultParams so it can be a stable useEffect dependency
+  const defaultParamsKey = JSON.stringify(defaultParams);
 
   const load = useCallback(async (p: number, q: string, ep: Record<string, string>) => {
     abortRef.current?.abort();
@@ -141,15 +143,16 @@ export default function DataTable<T extends Record<string, unknown>>({
 
   useEffect(() => {
     setPage(1);
-    void load(1, search, extraParams);
-  }, [load, search, extraParams]);
+    void load(1, search, defaultParams);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, search, defaultParamsKey]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const goTo = (p: number) => {
     const clamped = Math.max(1, Math.min(totalPages, p));
     setPage(clamped);
-    void load(clamped, search, extraParams);
+    void load(clamped, search, defaultParams);
   };
 
   // Page number windows
