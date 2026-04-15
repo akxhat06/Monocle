@@ -340,6 +340,9 @@ const TOOLTIP_STYLE = {
   color: "#f0f0f0",
 };
 
+const TOOLTIP_LABEL_STYLE = { color: "#f0f0f0", fontWeight: 600 };
+const TOOLTIP_ITEM_STYLE  = { color: "#c0c0c0" };
+
 function fmtTick(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
   // Show exact numbers with comma separators — no rounding to k
@@ -431,12 +434,19 @@ export default function DashboardMain() {
 
   useEffect(() => { void load(); }, [load]);
 
+  const [activePreset, setActivePreset] = useState<number | "all">("all");
+
   const applyPreset = (days: number | "all") => {
     const end = toYmd(new Date());
+    setActivePreset(days);
     if (days === "all") { setFrom(RANGE_ALL_FROM); setTo(end); return; }
     setFrom(shiftDays(end, -days));
     setTo(end);
   };
+
+  // If user manually edits the date inputs, clear the active preset highlight
+  const handleFromChange = (v: string) => { setFrom(v); setActivePreset("custom" as never); };
+  const handleToChange   = (v: string) => { setTo(v);   setActivePreset("custom" as never); };
 
   // Exact number formatting — no rounding, just locale commas
   const nf = useMemo(() => new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }), []);
@@ -462,7 +472,11 @@ export default function DashboardMain() {
               <button
                 type="button"
                 onClick={() => applyPreset("all")}
-                className="rounded-lg border border-violet-500/30 bg-violet-500/8 px-2.5 py-1.5 text-[11px] font-medium text-violet-300 transition hover:border-violet-500/45 hover:bg-violet-500/12"
+                className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition ${
+                  activePreset === "all"
+                    ? "border-violet-500/30 bg-violet-500/[0.08] text-violet-300"
+                    : "border-white/[0.07] bg-white/[0.03] text-[#5a5a5a] hover:border-violet-500/25 hover:text-violet-300"
+                }`}
               >
                 All
               </button>
@@ -471,7 +485,11 @@ export default function DashboardMain() {
                   key={d}
                   type="button"
                   onClick={() => applyPreset(d)}
-                  className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-1.5 text-[11px] font-medium text-[#5a5a5a] transition hover:border-violet-500/25 hover:text-violet-300"
+                  className={`rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition ${
+                    activePreset === d
+                      ? "border-violet-500/30 bg-violet-500/[0.08] text-violet-300"
+                      : "border-white/[0.07] bg-white/[0.03] text-[#5a5a5a] hover:border-violet-500/25 hover:text-violet-300"
+                  }`}
                 >
                   {d}d
                 </button>
@@ -483,7 +501,7 @@ export default function DashboardMain() {
                 <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#4a4a4a]">From</span>
                 <input
                   type="date" value={from} max={to} min={DATA_START}
-                  onChange={(e) => setFrom(e.target.value)}
+                  onChange={(e) => handleFromChange(e.target.value)}
                   className="h-8 max-w-[9.25rem] rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 text-xs text-[#f0f0f0] outline-none transition focus:border-violet-500/40 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)]"
                 />
               </label>
@@ -491,7 +509,7 @@ export default function DashboardMain() {
                 <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#4a4a4a]">To</span>
                 <input
                   type="date" value={to} min={from} max={today}
-                  onChange={(e) => setTo(e.target.value)}
+                  onChange={(e) => handleToChange(e.target.value)}
                   className="h-8 max-w-[9.25rem] rounded-lg border border-white/[0.07] bg-white/[0.04] px-2.5 text-xs text-[#f0f0f0] outline-none transition focus:border-violet-500/40 focus:shadow-[0_0_0_3px_rgba(139,92,246,0.12)]"
                 />
               </label>
@@ -528,8 +546,10 @@ export default function DashboardMain() {
       {/* Metric grid — 2 col mobile, 3 col md, 6 col xl */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         {METRIC_ROWS.map(({ key, title, trendKey }) => {
-          const curr = counts?.[key] ?? 0;
-          const prev = prevCounts?.[key] ?? 0;
+          // Display the in-range count (e.g. callsInRange) so the number
+          // reflects the selected date window, not the all-time total.
+          const curr = counts?.[trendKey] ?? 0;
+          const prev = prevCounts?.[trendKey] ?? 0;
           return (
             <KpiCardShell
               key={key}
@@ -540,8 +560,8 @@ export default function DashboardMain() {
               metricKey={key}
               prev={prev}
               curr={curr}
-              trendPrev={prevCounts?.[trendKey] ?? 0}
-              trendCurr={counts?.[trendKey] ?? 0}
+              trendPrev={prev}
+              trendCurr={curr}
             />
           );
         })}
@@ -601,6 +621,8 @@ export default function DashboardMain() {
                       tickLine={false} axisLine={false} tickFormatter={fmtTick} width={36} />
                     <Tooltip
                       contentStyle={TOOLTIP_STYLE}
+                      labelStyle={TOOLTIP_LABEL_STYLE}
+                      itemStyle={TOOLTIP_ITEM_STYLE}
                       formatter={(value, name) => [
                         fmtTick(Number(value)),
                         SERIES.find(s => s.key === name)?.label ?? String(name),
@@ -641,7 +663,8 @@ export default function DashboardMain() {
                     axisLine={false} tickFormatter={fmtTick}/>
                   <YAxis type="category" dataKey="channel" stroke="transparent"
                     tick={{ fill: "#c0c0c0", fontSize: 12 }} tickLine={false} width={44}/>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [fmtTick(Number(v)), "Questions"]}
+                   <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} itemStyle={TOOLTIP_ITEM_STYLE}
+                    formatter={(v) => [fmtTick(Number(v)), "Questions"]}
                     cursor={{ fill: "rgba(255,255,255,0.03)" }}/>
                   <Bar dataKey="questions" radius={[0, 6, 6, 0]} maxBarSize={28}>
                     {channelRows.map((r, i) => (

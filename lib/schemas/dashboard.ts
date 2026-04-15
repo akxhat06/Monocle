@@ -22,6 +22,14 @@ export type TableWidget = {
   pageSize?: number;
 };
 
+export type PieWidget = {
+  type: "pie" | "donut";
+  title?: string;
+  data: Array<Record<string, unknown>>;
+  nameKey: string;
+  valueKey: string;
+};
+
 export type BarWidget = {
   type: "bar";
   title?: string;
@@ -46,7 +54,7 @@ export type AreaWidget = {
   yKeys: string[];
 };
 
-export type Widget = KpiWidget | MarkdownWidget | TableWidget | BarWidget | LineWidget | AreaWidget;
+export type Widget = KpiWidget | MarkdownWidget | TableWidget | PieWidget | BarWidget | LineWidget | AreaWidget;
 export type LayoutNode =
   | Widget
   | { type: "row"; children: LayoutNode[] }
@@ -95,6 +103,17 @@ const TableWidgetSchema = z.object({
   pageSize: z.number().int().min(1).max(100).optional(),
 });
 
+// Pie / donut shared fields
+const pieFields = {
+  title: z.string().optional(),
+  data: z.array(z.record(z.string(), z.unknown())),
+  nameKey: z.string(),
+  valueKey: z.string(),
+};
+
+const PieWidgetSchema = z.object({ type: z.literal("pie"), ...pieFields });
+const DonutWidgetSchema = z.object({ type: z.literal("donut"), ...pieFields });
+
 // Shared chart fields
 const chartFields = {
   title: z.string().optional(),
@@ -131,6 +150,8 @@ const WidgetSchema = z.union([
   KpiWidgetSchema,
   MarkdownWidgetSchema,
   TableWidgetSchema,
+  PieWidgetSchema,
+  DonutWidgetSchema,
   BarWidgetSchema,
   LineWidgetSchema,
   AreaWidgetSchema,

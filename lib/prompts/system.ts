@@ -56,6 +56,12 @@ The dashboard argument MUST be a JSON object with this exact structure:
 **Area chart** (use "type":"area"):
 \`{"type":"area","title":"Questions Over Time","data":[...],"xKey":"day","yKeys":["questions"]}\`
 
+**Pie chart** (use "type":"pie" — for part-of-whole distribution, ≤ 8 slices):
+\`{"type":"pie","title":"Questions by Channel","data":[{"channel":"Voice","count":14200},{"channel":"Chat","count":3056}],"nameKey":"channel","valueKey":"count"}\`
+
+**Donut chart** (use "type":"donut" — same as pie but with a centre total label, preferred for 2–6 categories):
+\`{"type":"donut","title":"Call Status Breakdown","data":[{"status":"Connected","calls":18900},{"status":"Failed","calls":1200}],"nameKey":"status","valueKey":"calls"}\`
+
 **Table** (always include pageSize for log/detail tables):
 \`{"type":"table","title":"Top Errors","columns":["error","count"],"rows":[{"error":"...","count":111}],"pageSize":10}\`
 
@@ -63,20 +69,39 @@ The dashboard argument MUST be a JSON object with this exact structure:
 \`{"type":"markdown","content":"Brief note here."}\`
 
 ### Rules
-- Widget type literals are EXACTLY: "kpi", "line", "bar", "area", "table", "markdown"
+- Widget type literals are EXACTLY: "kpi", "line", "bar", "area", "pie", "donut", "table", "markdown"
 - Do NOT use "chart" as a type. Do NOT use "chartType".
 - KPI "value" must be a STRING (e.g., "341", "7.9 min", "68.9%") — not a number.
 - KPI "label" is the field name — do NOT use "title" on kpi nodes.
 - Never render more than 8 widgets per dashboard.
 
-## Chart selection rules
+## Chart selection rules — read user intent first (CRITICAL)
 
-- **KPI cards**: Single aggregate numbers (totals, averages, percentages). Lead overview dashboards with 3–5 KPI cards in a grid.
-- **Line chart**: Time series — any metric over time. Default for "trend", "over time", "daily/weekly/monthly".
-- **Area chart**: Stacked time series showing composition over time.
-- **Bar chart**: Categorical comparisons. Use horizontal when labels are long. Max 15 categories.
-- **Table**: Detail views, top-N lists with multiple columns, or when user asks for a table. Always set \`"pageSize": 10\`. Never put more than 50 rows in a table widget — summarise or aggregate instead.
-- **Markdown**: Short explanatory notes or caveats (1–2 sentences max).
+**Step 1 — understand what the user is asking for:**
+
+- Did they ask for a **count / total / number**? → KPI card(s). Do NOT add a chart unless they also ask for a trend or breakdown.
+- Did they ask for a **trend / over time / daily / weekly**? → Line or area chart.
+- Did they ask for a **comparison / vs / which is higher**? → Bar chart or side-by-side KPI cards.
+- Did they ask for a **distribution / breakdown / share / split / proportion / percentage**? → Pie or donut chart.
+- Did they ask for **logs / list / records / show me the data**? → Table (paginated).
+- Did they ask for an **overview / summary / how is the platform doing**? → KPI grid + supporting charts.
+
+**Step 2 — pick the right widget:**
+
+- **KPI card**: Any question with "how many", "total", "count", "average", "what is the number". A single scalar answer. If comparing 2–4 totals (e.g. "questions vs errors"), show one KPI card per metric in a grid — NOT a pie chart.
+- **Line chart**: Any question with "trend", "over time", "per day/week/month", "history".
+- **Area chart**: Stacked time series showing composition changing over time.
+- **Bar chart**: Comparing values across categories (e.g. "errors by type", "calls by language"). Max 15 bars.
+- **Pie chart**: Showing part-of-whole proportions — ONLY when user asks about "distribution", "breakdown", "split", "share", "proportion", "what percentage", "how is X split". Max 8 slices.
+- **Donut chart**: Same as pie, preferred for 2–6 categories. Shows a centre total.
+- **Table**: "Show me the logs", "list the records", "show individual questions/calls/errors". Always paginated (pageSize: 10, max 50 rows in payload).
+- **Markdown**: Brief caveat or note only.
+
+**Anti-patterns — NEVER do these:**
+- NEVER render a pie/donut for a "total count" or "how many X vs Y" question — use KPI cards instead.
+- NEVER render a chart when the user just wants a number.
+- NEVER render a table when the user wants a total or trend.
+- NEVER add extra widgets the user did not ask for (e.g. do not add a donut when the user only asked for counts).
 
 ## Layout rules
 
@@ -270,6 +295,16 @@ ORDER BY day
 **"How are calls trending?"**
 → Query: SELECT date_trunc('day', start_datetime)::date as day, count(*) FROM calls GROUP BY day ORDER BY day
 → Dashboard: KPI card (total calls) + line chart of calls per day
+
+**"How many questions vs errors?" / "total count of questions vs errors"**
+→ User wants numbers, NOT a chart
+→ Query: two aggregates — SELECT count(*) FROM questions; SELECT count(*) FROM errordetails
+→ Dashboard: grid of 2 KPI cards (Total Questions + Total Errors) — NO pie, NO donut, NO bar
+
+**"Show questions by channel" / "voice vs chat distribution" / "breakdown by language"**
+→ User wants proportions/distribution
+→ Query: SELECT channel_label, count(*) GROUP BY channel_label (≤ 8 groups)
+→ Dashboard: donut chart (2–6 slices) or pie chart (up to 8 slices) — NOT a bar chart
 
 **"ASR performance"**
 → Query: SELECT date_trunc('day', created_at)::date as day, avg(latencyms), count(*) FILTER (WHERE NOT success) as failures FROM asr_details GROUP BY day ORDER BY day

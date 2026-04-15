@@ -8,6 +8,7 @@ import MonocleMarkAnimated from "@/components/brand/MonocleMarkAnimated";
 import DashboardRenderer from "@/components/DashboardRenderer";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 import { DashboardSchema } from "@/lib/schemas/dashboard";
+import { useNotificationStore } from "@/store/notifications";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -403,6 +404,8 @@ const SUGGESTIONS = [
 export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: boolean }) {
   useCopilotAdditionalInstructions({ instructions: SYSTEM_PROMPT }, []);
 
+  const addNotification = useNotificationStore((s) => s.add);
+
   const { messages, sendMessage, isLoading, stopGeneration } =
     useCopilotChatInternal();
 
@@ -447,6 +450,11 @@ export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: b
           dashboard: latestDashboard,
           text: latestText,
         }]);
+        addNotification({
+          question: userMsg,
+          answer: latestText,
+          hasDashboard: latestDashboard !== null,
+        });
         currentUserMsgRef.current = "";
       }
     }

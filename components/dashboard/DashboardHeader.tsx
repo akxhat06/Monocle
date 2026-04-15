@@ -1,9 +1,11 @@
 "use client";
 
 import type { User } from "@supabase/supabase-js";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import { useNotificationStore } from "@/store/notifications";
 
+// ── useClock ──────────────────────────────────────────────────────────────────
 function useClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -13,6 +15,7 @@ function useClock() {
   return now;
 }
 
+// ── displayFromUser ───────────────────────────────────────────────────────────
 function displayFromUser(user: User): { primary: string; secondary: string; initials: string } {
   const meta = user.user_metadata ?? {};
   const email = user.email?.trim() ?? "";
@@ -38,10 +41,43 @@ function displayFromUser(user: User): { primary: string; secondary: string; init
   return { primary, secondary, initials };
 }
 
+// ── Relative time ─────────────────────────────────────────────────────────────
+function relativeTime(date: Date): string {
+  const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+// ── DashboardHeader ───────────────────────────────────────────────────────────
 export default function DashboardHeader() {
   const now = useClock();
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
+  const bellRef = useRef<HTMLDivElement>(null);
+
+  const notifications  = useNotificationStore((s) => s.notifications);
+  const markAllRead    = useNotificationStore((s) => s.markAllRead);
+  const clearAll       = useNotificationStore((s) => s.clear);
+  const unreadCount    = notifications.filter((n) => !n.read).length;
+
+  // Close popover when clicking outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setBellOpen(false);
+      }
+    }
+    if (bellOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [bellOpen]);
+
+  // Mark all read when popover opens
+  useEffect(() => {
+    if (bellOpen && unreadCount > 0) markAllRead();
+  }, [bellOpen, unreadCount, markAllRead]);
 
   useEffect(() => {
     const supabase = createBrowserSupabaseClient();
@@ -91,18 +127,115 @@ export default function DashboardHeader() {
 
       {/* Right — actions + user */}
       <div className="flex items-center gap-1.5">
-        {/* Notification bell */}
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="relative flex h-8 w-8 items-center justify-center rounded-lg text-[#909090] transition hover:bg-white/[0.06] hover:text-[#d8d8d8]"
-        >
-          <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-          </svg>
-          {/* Badge */}
-          <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-violet-400" aria-hidden />
-        </button>
+
+        {/* ── Notification bell + popover ──────────────────────────────── */}
+        <div ref={bellRef} className="relative">
+          <button
+            type="button"
+            aria-label="Notifications"
+            onClick={() => setBellOpen((o) => !o)}
+            className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition ${
+              bellOpen
+                ? "bg-white/[0.08] text-[#d8d8d8]"
+                : "text-[#909090] hover:bg-white/[0.06] hover:text-[#d8d8d8]"
+            }`}
+          >
+            <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+            </svg>
+            {/* Unread badge */}
+            {unreadCount > 0 && (
+              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-500 text-[9px] font-bold text-white leading-none">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+            {unreadCount === 0 && notifications.length > 0 && (
+              <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-violet-400/50" aria-hidden />
+            )}
+          </button>
+
+          {/* Popover */}
+          {bellOpen && (
+            <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-80 rounded-2xl border border-white/[0.08] bg-[#1a1a1a] shadow-2xl shadow-black/60 overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-[12px] font-semibold text-[#f0f0f0]">AI Query History</span>
+                  {notifications.length > 0 && (
+                    <span className="rounded-full bg-violet-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-violet-300">
+                      {notifications.length}
+                    </span>
+                  )}
+                </div>
+                {notifications.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="text-[11px] text-[#5a5a5a] transition hover:text-[#c0c0c0]"
+                  >
+                    Clear all
+                  </button>
+                )}
+              </div>
+
+              {/* List */}
+              <div className="max-h-[400px] overflow-y-auto">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+                    <svg className="h-8 w-8 text-[#3a3a3a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                    </svg>
+                    <p className="text-[12px] text-[#4a4a4a]">No queries yet</p>
+                    <p className="text-[11px] text-[#3a3a3a]">Ask the AI assistant something to see it here</p>
+                  </div>
+                ) : (
+                  notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className="flex gap-3 border-b border-white/[0.04] px-4 py-3 last:border-0 hover:bg-white/[0.02] transition-colors"
+                    >
+                      {/* Icon */}
+                      <div className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${
+                        n.hasDashboard
+                          ? "bg-violet-500/15 text-violet-400"
+                          : "bg-white/[0.05] text-[#6a6a6a]"
+                      }`}>
+                        {n.hasDashboard ? (
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                          </svg>
+                        ) : (
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Content */}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[12px] font-medium text-[#e0e0e0] leading-snug">
+                          {n.question}
+                        </p>
+                        {n.answer ? (
+                          <p className="mt-0.5 line-clamp-2 text-[11px] text-[#6a6a6a] leading-snug">
+                            {n.answer}
+                          </p>
+                        ) : (
+                          <p className="mt-0.5 text-[11px] text-[#4a4a4a] leading-snug italic">
+                            {n.hasDashboard ? "Dashboard generated" : "Responded"}
+                          </p>
+                        )}
+                        <p className="mt-1 text-[10px] text-[#3a3a3a]">
+                          {relativeTime(n.timestamp)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Settings */}
         <button
@@ -123,10 +256,8 @@ export default function DashboardHeader() {
           type="button"
           className="flex items-center gap-2.5 rounded-xl border border-transparent px-2 py-1.5 transition hover:border-white/[0.08] hover:bg-white/[0.04]"
         >
-          {/* Avatar */}
           <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-violet-700 text-[11px] font-bold text-white ring-2 ring-violet-500/20">
             {!ready ? "…" : initials}
-            {/* Online dot */}
             <span className="absolute bottom-0 right-0 h-2 w-2 rounded-full bg-emerald-400 ring-2 ring-[#141414]" aria-hidden />
           </div>
           <div className="hidden min-w-0 text-left sm:block">

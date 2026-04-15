@@ -36,6 +36,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+button,
+[role="button"] {
+  cursor: pointer;
+}
+
 /* Full-app shell — warm charcoal gradient, subtle violet glow */
 .monocle-app-root {
   min-height: 100vh;

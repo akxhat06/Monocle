@@ -5,6 +5,7 @@ import DataTableWidget from "./widgets/DataTableWidget";
 import KpiCard from "./widgets/KpiCard";
 import LineChartWidget from "./widgets/LineChartWidget";
 import MarkdownWidget from "./widgets/MarkdownWidget";
+import PieChartWidget from "./widgets/PieChartWidget";
 
 export default function DashboardRenderer({ node }: { node: LayoutNode }) {
   switch (node.type) {
@@ -38,6 +39,10 @@ export default function DashboardRenderer({ node }: { node: LayoutNode }) {
       return <MarkdownWidget content={node.content} />;
     case "table":
       return <DataTableWidget title={node.title} columns={node.columns} rows={node.rows} pageSize={node.pageSize} />;
+    case "pie":
+      return <PieChartWidget title={node.title} data={node.data} nameKey={node.nameKey} valueKey={node.valueKey} donut={false} />;
+    case "donut":
+      return <PieChartWidget title={node.title} data={node.data} nameKey={node.nameKey} valueKey={node.valueKey} donut={true} />;
     case "bar":
       return <BarChartWidget title={node.title} data={node.data} xKey={node.xKey} yKeys={node.yKeys} />;
     case "line":
