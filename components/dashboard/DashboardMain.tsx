@@ -14,7 +14,7 @@ import type {
 } from "@/lib/overview/types";
 
 // ── Chart data types ─────────────────────────────────────────────────────────
-type TrendRow   = { day: string; calls: number; questions: number };
+type TrendRow   = { day: string; calls: number; questions: number; errors: number; asr: number; tts: number; users: number };
 type ChannelRow = { channel: string; questions: number };
 
 const METRIC_ROWS: {
@@ -551,52 +551,73 @@ export default function DashboardMain() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
 
 
-        {/* 1. Calls + Questions trend — takes 2/3 width */}
-        <div className="lg:col-span-2 rounded-2xl border border-white/[0.07] bg-[#1a1a1a] p-4"
-          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.35)" }}>
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-semibold text-[#f0f0f0]">Activity Trend</h2>
-              <p className="text-[11px] text-[#4a4a4a] mt-0.5">Calls &amp; questions over selected period</p>
+        {/* 1. All metrics trend — takes 2/3 width */}
+        {(() => {
+          const SERIES = [
+            { key: "calls",     label: "Calls",     color: "#60a5fa" },
+            { key: "questions", label: "Questions",  color: "#a78bfa" },
+            { key: "asr",       label: "ASR",        color: "#fbbf24" },
+            { key: "tts",       label: "TTS",        color: "#2dd4bf" },
+            { key: "errors",    label: "Errors",     color: "#fb7185" },
+            { key: "users",     label: "Users",      color: "#34d399" },
+          ];
+          return (
+            <div className="lg:col-span-2 rounded-2xl border border-white/[0.07] bg-[#1a1a1a] p-4"
+              style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.35)" }}>
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#f0f0f0]">Activity Trend</h2>
+                  <p className="text-[11px] text-[#4a4a4a] mt-0.5">All metrics over selected period</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  {SERIES.map(s => (
+                    <span key={s.key} className="flex items-center gap-1.5 text-[10px] text-[#7a7a7a]">
+                      <span className="h-2 w-2 rounded-full shrink-0" style={{ background: s.color }} />
+                      {s.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              {chartsLoading ? (
+                <div className="h-36 animate-pulse rounded-xl bg-white/[0.03]" />
+              ) : trendRows.length === 0 ? (
+                <div className="flex h-36 items-center justify-center text-xs text-[#3a3a3a]">No data for this range</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={150}>
+                  <AreaChart data={trendRows.map(r => ({ ...r, day: fmtDay(r.day) }))}
+                    margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                    <defs>
+                      {SERIES.map(s => (
+                        <linearGradient key={s.key} id={`g-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor={s.color} stopOpacity={0.20} />
+                          <stop offset="95%" stopColor={s.color} stopOpacity={0.01} />
+                        </linearGradient>
+                      ))}
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                    <XAxis dataKey="day" stroke="transparent" tick={{ fill: "#5a5a5a", fontSize: 10 }}
+                      tickLine={false} interval="preserveStartEnd" />
+                    <YAxis stroke="transparent" tick={{ fill: "#5a5a5a", fontSize: 10 }}
+                      tickLine={false} axisLine={false} tickFormatter={fmtTick} width={36} />
+                    <Tooltip
+                      contentStyle={TOOLTIP_STYLE}
+                      formatter={(value, name) => [
+                        fmtTick(Number(value)),
+                        SERIES.find(s => s.key === name)?.label ?? String(name),
+                      ]}
+                      cursor={{ stroke: "rgba(255,255,255,0.06)" }}
+                    />
+                    {SERIES.map(s => (
+                      <Area key={s.key} type="monotone" dataKey={s.key}
+                        stroke={s.color} strokeWidth={1.5}
+                        fill={`url(#g-${s.key})`} dot={false} />
+                    ))}
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
-            <div className="flex items-center gap-3 text-[11px] text-[#5a5a5a]">
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#60a5fa] inline-block"/>Calls</span>
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[#a78bfa] inline-block"/>Questions</span>
-            </div>
-          </div>
-          {chartsLoading ? (
-            <div className="h-36 animate-pulse rounded-xl bg-white/[0.03]" />
-          ) : trendRows.length === 0 ? (
-            <div className="flex h-36 items-center justify-center text-xs text-[#3a3a3a]">No data for this range</div>
-          ) : (
-            <ResponsiveContainer width="100%" height={150}>
-              <AreaChart data={trendRows.map(r => ({ ...r, day: fmtDay(r.day) }))}
-                margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gCalls" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"   stopColor="#60a5fa" stopOpacity={0.25}/>
-                    <stop offset="95%"  stopColor="#60a5fa" stopOpacity={0.02}/>
-                  </linearGradient>
-                  <linearGradient id="gQuestions" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"   stopColor="#a78bfa" stopOpacity={0.25}/>
-                    <stop offset="95%"  stopColor="#a78bfa" stopOpacity={0.02}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false}/>
-                <XAxis dataKey="day" stroke="transparent" tick={{ fill: "#4a4a4a", fontSize: 10 }}
-                  tickLine={false} interval="preserveStartEnd"/>
-                <YAxis stroke="transparent" tick={{ fill: "#4a4a4a", fontSize: 10 }}
-                  tickLine={false} axisLine={false} tickFormatter={fmtTick} width={32}/>
-                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v) => [fmtTick(Number(v))]}
-                  cursor={{ stroke: "rgba(255,255,255,0.06)" }}/>
-                <Area type="monotone" dataKey="calls" stroke="#60a5fa" strokeWidth={1.8}
-                  fill="url(#gCalls)" dot={false}/>
-                <Area type="monotone" dataKey="questions" stroke="#a78bfa" strokeWidth={1.8}
-                  fill="url(#gQuestions)" dot={false}/>
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
+          );
+        })()}
 
         {/* 2. Questions by Channel — 1/3 width */}
         <div className="rounded-2xl border border-white/[0.07] bg-[#1a1a1a] p-4"

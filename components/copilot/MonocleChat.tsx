@@ -3,10 +3,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useCopilotChatInternal, useCopilotAdditionalInstructions } from "@copilotkit/react-core";
 import { SYSTEM_PROMPT } from "@/lib/prompts/system";
-import type { OverviewCounts, OverviewCountsResponse } from "@/lib/overview/types";
-import KpiCard from "@/components/widgets/KpiCard";
-import BarChartWidget from "@/components/widgets/BarChartWidget";
-import LineChartWidget from "@/components/widgets/LineChartWidget";
+
 import MonocleMarkAnimated from "@/components/brand/MonocleMarkAnimated";
 import DashboardRenderer from "@/components/DashboardRenderer";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
@@ -90,12 +87,6 @@ function extractDashboardRender(msgs: AnyMessage[]): React.ReactNode | null {
   return null;
 }
 
-function fmtCount(n: number | undefined): string {
-  if (n === undefined) return "—";
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return n.toString();
-}
 
 function extractText(content: unknown): string {
   if (typeof content === "string") return content;
@@ -217,6 +208,97 @@ function buildSteps(msgs: AnyMessage[]): Step[] {
   return steps;
 }
 
+// ── Suggestion Carousel ───────────────────────────────────────────────────────
+
+function SuggestionCarousel({
+  suggestions,
+  onSelect,
+}: {
+  suggestions: { label: string; prompt: string }[];
+  onSelect: (prompt: string) => void;
+}) {
+  const n = suggestions.length;
+  const [current, setCurrent] = useState(0);
+  // Track direction: +1 = forward (slide left), -1 = backward (slide right)
+  const dirRef = useRef(1);
+
+  const advance = useCallback((next: number) => {
+    // Compute shortest circular direction
+    const diff = ((next - current) + n) % n;
+    dirRef.current = diff <= n / 2 ? 1 : -1;
+    setCurrent(next);
+  }, [current, n]);
+
+  // Auto-advance every 3s — always forward, wraps around seamlessly
+  useEffect(() => {
+    const id = setInterval(() => {
+      dirRef.current = 1;
+      setCurrent((c) => (c + 1) % n);
+    }, 3000);
+    return () => clearInterval(id);
+  }, [n]);
+
+  return (
+    <div className="shrink-0 flex flex-col items-center gap-1.5 px-3 py-2 border-t border-white/[0.04]">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#5a5a5a]">Try asking</p>
+      <div className="relative flex items-center justify-center w-full overflow-hidden" style={{ height: 34 }}>
+        {suggestions.map((s, i) => {
+          // Circular distance from current
+          const rawOffset = i - current;
+          // Normalize to [-floor(n/2), ceil(n/2)]
+          const offset = rawOffset > n / 2
+            ? rawOffset - n
+            : rawOffset < -n / 2
+              ? rawOffset + n
+              : rawOffset;
+
+          const isActive = offset === 0;
+          const isAdjacent = Math.abs(offset) === 1;
+          if (!isActive && !isAdjacent) return null;
+
+          // Translate: active=center, next=right, prev=left
+          const tx = offset === 0 ? "0%" : offset > 0 ? "115%" : "-115%";
+
+          return (
+            <button
+              key={s.prompt}
+              type="button"
+              onClick={() => isActive ? onSelect(s.prompt) : advance(i)}
+              tabIndex={isActive ? 0 : -1}
+              className={`absolute transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[11px] leading-none whitespace-nowrap select-none
+                ${isActive
+                  ? "border-violet-500/30 bg-violet-500/10 text-white z-10"
+                  : "border-white/[0.05] bg-white/[0.02] text-[#4a4a4a] z-0 cursor-pointer"
+                }`}
+              style={{
+                transform: `translateX(${tx}) scale(${isActive ? 1 : 0.88})`,
+                opacity: isActive ? 1 : 0.25,
+              }}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isActive ? "bg-violet-400" : "bg-white/15"}`} aria-hidden />
+              {s.label}
+            </button>
+          );
+        })}
+      </div>
+      {/* Dots */}
+      <div className="flex items-center gap-1">
+        {suggestions.map((_, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => advance(i)}
+            aria-label={`Suggestion ${i + 1}`}
+            className={`rounded-full transition-all duration-300 ${
+              i === current ? "bg-violet-400 w-3 h-1" : "bg-white/[0.12] w-1 h-1 hover:bg-white/25"
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function TypingDots() {
@@ -244,7 +326,7 @@ function AgentStepper({ steps, isLoading }: { steps: Step[]; isLoading: boolean 
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-50" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-400" />
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-[#5a5a5a]">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-[#c0c0c0]">
           Monocle is working
         </span>
       </div>
@@ -252,7 +334,7 @@ function AgentStepper({ steps, isLoading }: { steps: Step[]; isLoading: boolean 
       {steps.length === 0 && isLoading && (
         <div className="flex items-center gap-2 pl-0.5">
           <TypingDots />
-          <span className="text-xs text-[#5a5a5a]">Thinking…</span>
+          <span className="text-xs text-[#c0c0c0]">Thinking…</span>
         </div>
       )}
 
@@ -268,7 +350,7 @@ function AgentStepper({ steps, isLoading }: { steps: Step[]; isLoading: boolean 
               <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" opacity="0.8" />
             </svg>
           )}
-          <span className={`text-xs leading-snug ${step.status === "done" ? "text-[#4a4a4a]" : "text-[#c0c0c0]"}`}>
+          <span className={`text-xs leading-snug ${step.status === "done" ? "text-[#c8c8c8]" : "text-[#c0c0c0]"}`}>
             {step.label}
           </span>
         </div>
@@ -280,10 +362,10 @@ function AgentStepper({ steps, isLoading }: { steps: Step[]; isLoading: boolean 
 // ── Predefined suggestion prompts ─────────────────────────────────────────────
 
 const SUGGESTIONS = [
-  { label: "Platform overview", prompt: "Give me a platform overview" },
-  { label: "Calls trend", prompt: "How are calls trending this month?" },
-  { label: "Common errors", prompt: "What are the most common errors?" },
-  { label: "ASR latency", prompt: "Show ASR latency over time" },
+  { label: "Give me a platform overview", prompt: "Give me a platform overview with KPIs, call trends, and questions by channel" },
+  { label: "How are calls trending this week?", prompt: "Show me how calls are trending this week vs last week" },
+  { label: "What is the ASR success rate?", prompt: "Show me the ASR success rate and average latency over time" },
+  { label: "Show errors by type this week", prompt: "What are the most common errors this week?" },
 ];
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -295,26 +377,22 @@ export default function MonocleChat() {
     useCopilotChatInternal();
 
   const [input, setInput] = useState("");
-  const [counts, setCounts] = useState<OverviewCounts | null>(null);
   const [pendingUserMsg, setPendingUserMsg] = useState<string | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    fetch("/api/overview/counts", { credentials: "same-origin" })
-      .then((r) => r.json())
-      .then((body: OverviewCountsResponse & { error?: string }) => {
-        if (body.counts) setCounts(body.counts);
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
+    if (!input) {
+      // Empty — always reset to single line
+      ta.style.height = "20px";
+      return;
+    }
     ta.style.height = "auto";
-    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
+    ta.style.height = `${Math.min(ta.scrollHeight, 60)}px`;
   }, [input]);
 
   useEffect(() => {
@@ -405,64 +483,70 @@ export default function MonocleChat() {
 
         {/* ── Empty state ──────────────────────────────────────────────── */}
         {showEmptyState && (
-          <div className="flex flex-col gap-4 pb-2">
-            <div className="flex flex-col items-center gap-2 pt-2">
-              <MonocleMarkAnimated size={52} title="Monocle AI" />
-              <p className="text-xs text-[#5a5a5a] text-center">
-                Ask anything — I&apos;ll query your data and build a live dashboard.
-              </p>
-            </div>
+          <div className="flex flex-col gap-5 pb-2 pt-2">
 
-            <div className="grid grid-cols-4 gap-1.5">
-              <KpiCard label="Users"     value={fmtCount(counts?.users)}     compact />
-              <KpiCard label="Calls"     value={fmtCount(counts?.calls)}     compact />
-              <KpiCard label="Questions" value={fmtCount(counts?.questions)} compact />
-              <KpiCard label="Errors"    value={fmtCount(counts?.errors)}    compact />
-            </div>
-
-            <div className="grid grid-cols-2 gap-1.5">
-              <BarChartWidget
-                title="By Channel"
-                data={[
-                  { channel: "Voice", questions: 1420000 },
-                  { channel: "Chat", questions: 305696 },
-                ]}
-                xKey="channel"
-                yKeys={["questions"]}
-                chartHeight={120}
-              />
-              <LineChartWidget
-                title="Calls Trend"
-                data={[
-                  { day: "M", calls: 820 },
-                  { day: "T", calls: 950 },
-                  { day: "W", calls: 1100 },
-                  { day: "T", calls: 870 },
-                  { day: "F", calls: 1230 },
-                  { day: "S", calls: 650 },
-                  { day: "S", calls: 480 },
-                ]}
-                xKey="day"
-                yKeys={["calls"]}
-                chartHeight={120}
-              />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <p className="text-[10px] font-medium uppercase tracking-widest text-[#3a3a3a]">Try asking</p>
-              <div className="grid grid-cols-2 gap-1.5">
-                {SUGGESTIONS.map(({ label, prompt }) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => void submit(prompt)}
-                    className="rounded-lg border border-white/[0.07] bg-white/[0.03] px-3 py-2.5 text-left text-xs text-[#7a7a7a] transition hover:border-violet-500/25 hover:bg-violet-500/5 hover:text-[#c0c0c0] leading-snug"
-                  >
-                    {label}
-                  </button>
-                ))}
+            {/* Brand + headline */}
+            <div className="flex flex-col items-center gap-3 pt-2">
+              <MonocleMarkAnimated size={44} title="Monocle AI" />
+              <div className="text-center">
+                <p className="text-sm font-semibold text-[#e0e0e0] leading-snug">Monocle AI</p>
+                <p className="mt-1 text-[11px] text-[#c0c0c0] leading-relaxed max-w-[220px]">
+                  Ask questions in plain language — I&apos;ll query your data and build a live dashboard instantly.
+                </p>
               </div>
             </div>
+
+            {/* What I can do */}
+            <div className="flex flex-col gap-2">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#b0b0b0] px-0.5">What I can do</p>
+              {[
+                {
+                  icon: (
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                    </svg>
+                  ),
+                  title: "Build live dashboards",
+                  desc: "Charts, KPIs, and tables generated from your real data",
+                },
+                {
+                  icon: (
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 2.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125" />
+                    </svg>
+                  ),
+                  title: "Query any metric",
+                  desc: "Calls, questions, ASR/TTS latency, errors, user trends",
+                },
+                {
+                  icon: (
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+                    </svg>
+                  ),
+                  title: "Filter by date range",
+                  desc: "Compare this week vs last week, month-over-month, custom ranges",
+                },
+                {
+                  icon: (
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
+                  ),
+                  title: "Natural language",
+                  desc: "No SQL needed — just ask like you&apos;re talking to an analyst",
+                },
+              ].map((item) => (
+                <div key={item.title} className="flex items-start gap-2.5 rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2.5">
+                  <span className="mt-0.5 shrink-0 text-violet-400">{item.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-medium text-[#d0d0d0] leading-tight">{item.title}</p>
+                    <p className="mt-0.5 text-[10px] text-[#e0e0e0] leading-snug">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
           </div>
         )}
 
@@ -517,9 +601,14 @@ export default function MonocleChat() {
         <div ref={bottomRef} />
       </div>
 
+      {/* ── Suggestion carousel — only when no conversation yet ─────────── */}
+      {showEmptyState && (
+        <SuggestionCarousel suggestions={SUGGESTIONS} onSelect={(p) => void submit(p)} />
+      )}
+
       {/* ── Input bar ────────────────────────────────────────────────────── */}
       <div className="shrink-0 border-t border-white/[0.06] bg-[#161616] px-3 py-2.5">
-        <div className="flex items-end gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 py-2 focus-within:border-violet-500/30 focus-within:bg-white/[0.05] transition-colors">
+        <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.04] px-3 py-1.5 focus-within:border-violet-500/30 focus-within:bg-white/[0.05] transition-colors">
           <textarea
             ref={textareaRef}
             value={input}
@@ -528,8 +617,8 @@ export default function MonocleChat() {
             rows={1}
             placeholder="Ask an analytics question…"
             disabled={Boolean(pendingUserMsg) || isLoading}
-            className="flex-1 resize-none bg-transparent text-sm text-[#f0f0f0] placeholder:text-[#3a3a3a] outline-none disabled:opacity-40 leading-relaxed"
-            style={{ minHeight: "22px", maxHeight: "120px" }}
+            className="flex-1 resize-none overflow-y-auto bg-transparent text-sm text-[#f0f0f0] placeholder:text-[#b0b0b0] outline-none disabled:opacity-40 leading-5"
+            style={{ minHeight: "20px", maxHeight: "60px" }}
           />
           <button
             type="button"
