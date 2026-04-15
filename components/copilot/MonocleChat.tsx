@@ -301,60 +301,90 @@ function SuggestionCarousel({
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function TypingDots() {
-  return (
-    <div className="flex items-center gap-1 px-1 py-1.5">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-1.5 w-1.5 rounded-full bg-violet-400 animate-bounce"
-          style={{ animationDelay: `${i * 0.18}s`, animationDuration: "0.9s" }}
-        />
-      ))}
-    </div>
-  );
-}
-
 function AgentStepper({ steps, isLoading }: { steps: Step[]; isLoading: boolean }) {
   if (steps.length === 0 && !isLoading) return null;
 
-  return (
-    <div className="flex flex-col gap-1.5 rounded-xl border border-white/[0.07] bg-[#1f1f1f] px-3.5 py-3">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-0.5">
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-50" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-violet-400" />
+  // When no steps yet, show a thinking pulse
+  if (steps.length === 0 && isLoading) {
+    return (
+      <div className="flex items-center gap-2 px-1">
+        <span className="text-[11px] text-[#7a7a7a]">Thinking</span>
+        <span className="flex items-center gap-[3px]">
+          {[0,1,2,3].map(i => (
+            <span key={i} className="inline-block w-1 rounded-full bg-violet-400"
+              style={{
+                height: 12,
+                animation: "agentBar 1s ease-in-out infinite",
+                animationDelay: `${i * 0.15}s`,
+              }} />
+          ))}
         </span>
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-[#c0c0c0]">
-          Monocle is working
-        </span>
+        <style>{`
+          @keyframes agentBar {
+            0%,100% { transform: scaleY(0.4); opacity:0.4; }
+            50%      { transform: scaleY(1);   opacity:1;   }
+          }
+        `}</style>
       </div>
+    );
+  }
 
-      {steps.length === 0 && isLoading && (
-        <div className="flex items-center gap-2 pl-0.5">
-          <TypingDots />
-          <span className="text-xs text-[#c0c0c0]">Thinking…</span>
-        </div>
-      )}
+  // While still loading but all steps show "done" = gap between AI turns.
+  // Force the last step to keep animating so there's no visual pause.
+  const hasRunning = steps.some(s => s.status === "running");
+  const allDoneButLoading = isLoading && steps.length > 0 && !hasRunning;
 
-      {steps.map((step, i) => (
-        <div key={step.id ?? i} className="flex items-center gap-2.5 pl-0.5">
-          {step.status === "done" ? (
-            <svg className="h-3.5 w-3.5 shrink-0 text-violet-400" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.3" opacity="0.3" />
-              <path d="M4.5 8.2l2.2 2.2 4.3-4.3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          ) : (
-            <svg className="h-3.5 w-3.5 shrink-0 animate-spin text-violet-400" viewBox="0 0 16 16" fill="none" aria-hidden>
-              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" strokeDasharray="28" strokeDashoffset="10" strokeLinecap="round" opacity="0.8" />
-            </svg>
-          )}
-          <span className={`text-xs leading-snug ${step.status === "done" ? "text-[#c8c8c8]" : "text-[#c0c0c0]"}`}>
-            {step.label}
-          </span>
-        </div>
-      ))}
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {steps.map((step, i) => {
+        const isDone = step.status === "done";
+        // Force last chip to animate during inter-step gap
+        const forceRunning = allDoneButLoading && i === steps.length - 1;
+        const isRunning = step.status === "running" || forceRunning;
+        const showDone = isDone && !forceRunning;
+
+        const short = step.label.startsWith("Querying")
+          ? `Query ${i + 1}`
+          : "Dashboard";
+
+        return (
+          <div
+            key={step.id ?? i}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium border transition-all duration-300
+              ${showDone
+                ? "border-violet-500/25 bg-violet-500/10 text-violet-300"
+                : isRunning
+                  ? "border-violet-400/40 bg-violet-400/10 text-violet-200"
+                  : "border-white/[0.07] bg-white/[0.03] text-[#6a6a6a]"
+              }`}
+          >
+            {showDone ? (
+              <svg className="h-3 w-3 shrink-0" viewBox="0 0 12 12" fill="none" aria-hidden>
+                <path d="M2 6.5l2.5 2.5 5-5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            ) : isRunning ? (
+              <span className="flex items-center gap-[2px] shrink-0">
+                {[0,1,2].map(j => (
+                  <span key={j} className="inline-block w-[3px] rounded-full bg-violet-300"
+                    style={{
+                      height: 10,
+                      animation: "agentBar 0.9s ease-in-out infinite",
+                      animationDelay: `${j * 0.18}s`,
+                    }} />
+                ))}
+              </span>
+            ) : null}
+            {short}
+          </div>
+        );
+      })}
+
+      <style>{`
+        @keyframes agentBar {
+          0%,100% { transform: scaleY(0.35); opacity:0.5; }
+          50%      { transform: scaleY(1);    opacity:1;   }
+        }
+      `}</style>
     </div>
   );
 }
@@ -379,34 +409,64 @@ export default function MonocleChat() {
   const [input, setInput] = useState("");
   const [pendingUserMsg, setPendingUserMsg] = useState<string | null>(null);
 
+  // ── Per-turn snapshot ─────────────────────────────────────────────────────
+  // Each completed AI turn is snapshotted here so it persists when Q2 starts.
+  type Turn = { key: string; userMsg: string; dashboard: React.ReactNode | null; text: string };
+  const [completedTurns, setCompletedTurns] = useState<Turn[]>([]);
+  const currentUserMsgRef = useRef<string>("");
+  const prevIsLoadingRef = useRef(false);
+
+  // When loading finishes, snapshot the just-completed turn
+  useEffect(() => {
+    const allMsgsNow = messages as unknown as AnyMessage[];
+    if (prevIsLoadingRef.current && !isLoading) {
+      // Find the LAST render_dashboard and the LAST assistant text in this session
+      let latestDashboard: React.ReactNode | null = null;
+      let latestText = "";
+
+      // Walk messages in reverse to find latest assistant text
+      for (let i = allMsgsNow.length - 1; i >= 0; i--) {
+        const m = allMsgsNow[i];
+        if (m.role === "user") break; // stop at previous user msg
+        if (m.role === "assistant" && !latestText) {
+          const t = extractText(m.content).trim();
+          if (t) latestText = t;
+        }
+      }
+
+      // Extract dashboard only from messages AFTER the last user message
+      const lastUserIdx = [...allMsgsNow].map((m,i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop() ?? -1;
+      const currentTurnMsgs = allMsgsNow.slice(lastUserIdx);
+      latestDashboard = extractDashboardRender(currentTurnMsgs);
+
+      const userMsg = currentUserMsgRef.current;
+      if (userMsg) {
+        setCompletedTurns(prev => [...prev, {
+          key: `turn-${Date.now()}`,
+          userMsg,
+          dashboard: latestDashboard,
+          text: latestText,
+        }]);
+        currentUserMsgRef.current = "";
+      }
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading, messages]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-
 
   useEffect(() => {
     const ta = textareaRef.current;
     if (!ta) return;
-    if (!input) {
-      // Empty — always reset to single line
-      ta.style.height = "20px";
-      return;
-    }
+    if (!input) { ta.style.height = "20px"; return; }
     ta.style.height = "auto";
     ta.style.height = `${Math.min(ta.scrollHeight, 60)}px`;
   }, [input]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isLoading, pendingUserMsg]);
-
-  useEffect(() => {
-    if (!pendingUserMsg) return;
-    const msgs = messages as unknown as AnyMessage[];
-    const hasRealUserMsg = msgs.some(
-      (m) => m.role === "user" && Boolean(extractText(m.content).trim()),
-    );
-    if (hasRealUserMsg) setPendingUserMsg(null);
-  }, [messages, pendingUserMsg]);
+  }, [completedTurns, isLoading, pendingUserMsg]);
 
   const sendingRef = useRef(false);
 
@@ -417,6 +477,7 @@ export default function MonocleChat() {
       sendingRef.current = true;
       setInput("");
       if (textareaRef.current) textareaRef.current.style.height = "auto";
+      currentUserMsgRef.current = trimmed;
       setPendingUserMsg(trimmed);
       try {
         await sendMessage({ id: `user-${Date.now()}`, role: "user", content: trimmed });
@@ -441,40 +502,42 @@ export default function MonocleChat() {
 
   const allMsgs = messages as unknown as AnyMessage[];
 
-  // User messages to always show
-  const userMsgs = allMsgs.filter(
-    (m) => m.role === "user" && Boolean(extractText(m.content).trim()),
-  );
+  // ── Stepper scoped to current turn only ───────────────────────────────────
+  // Find messages after the last user message (current turn only)
+  const lastUserIdx = [...allMsgs].map((m, i) => m.role === "user" ? i : -1).filter(i => i >= 0).pop() ?? -1;
+  const currentTurnMsgs = lastUserIdx >= 0 ? allMsgs.slice(lastUserIdx) : allMsgs;
 
-  // Assistant messages to show — only when the run is COMPLETE (not loading).
-  // While isLoading: hide all assistant text — the stepper is the only indicator.
-  const assistantMsgs = isLoading
-    ? []
-    : allMsgs.filter((m) => {
-        if (m.role !== "assistant") return false;
-        return Boolean(extractText(m.content).trim());
+  const [steps, setSteps] = useState<Step[]>([]);
+
+  useEffect(() => {
+    const fresh = buildSteps(currentTurnMsgs);
+    if (!isLoading) { return; }
+    setSteps(prev => {
+      if (fresh.length === 0) return prev;
+      if (fresh.length < prev.length) return prev;
+      return fresh.map((s, i) => {
+        const p = prev[i];
+        if (p?.status === "done" && s.status === "running") return p;
+        return s;
       });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMsgs, isLoading]);
 
-  // Extract the dashboard from render_dashboard tool call (bypasses useLazyToolRenderer
-  // which only handles toolCalls[0] and misses render_dashboard when it's called
-  // after multiple SQL queries on the same assistant message)
-  const dashboardNode = isLoading ? null : extractDashboardRender(allMsgs);
+  // Reset steps when a new message is submitted
+  useEffect(() => {
+    if (pendingUserMsg) setSteps([]);
+  }, [pendingUserMsg]);
 
-  // Combine for rendering — preserve message order
-  const visible = allMsgs.filter((m) => {
-    if (userMsgs.includes(m)) return true;
-    if (assistantMsgs.includes(m)) return true;
-    return false;
-  });
+  // Clear pending bubble only after the turn is fully snapshotted into completedTurns
+  useEffect(() => {
+    if (!isLoading && completedTurns.length > 0) {
+      setPendingUserMsg(null);
+    }
+  }, [isLoading, completedTurns.length]);
 
-  // Build stepper from all messages (including tool-call/tool-result roles)
-  const steps = buildSteps(allMsgs);
-
-  // Show stepper ONLY while the AI is actively running — hide as soon as done
   const showStepper = isLoading;
-
-  // Empty state: no user messages yet, nothing pending, not loading
-  const showEmptyState = userMsgs.length === 0 && !pendingUserMsg && !isLoading;
+  const showEmptyState = completedTurns.length === 0 && !pendingUserMsg && !isLoading;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -550,42 +613,32 @@ export default function MonocleChat() {
           </div>
         )}
 
-        {/* ── Rendered messages ─────────────────────────────────────────── */}
-        {visible.map((msg) => {
-          if (msg.role === "user") {
-            return (
-              <div key={msg.id} className="flex justify-end">
-                <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed">
-                  {extractText(msg.content)}
-                </div>
+        {/* ── Completed turns — each persists permanently ───────────────── */}
+        {completedTurns.map((turn) => (
+          <div key={turn.key} className="flex flex-col gap-2">
+            {/* User bubble */}
+            <div className="flex justify-end">
+              <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed">
+                {turn.userMsg}
               </div>
-            );
-          }
-
-          if (msg.role === "assistant") {
-            const text = extractText(msg.content).trim();
-            if (!text) return null;
-            return (
-              <div key={msg.id} className="max-w-[90%] self-start rounded-2xl rounded-bl-sm border border-white/[0.07] bg-[#1f1f1f] px-3.5 py-2.5 text-sm text-[#c0c0c0] leading-relaxed">
-                {renderMarkdown(text)}
+            </div>
+            {/* Dashboard */}
+            {turn.dashboard && (
+              <div className="w-full overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1a1a] p-3">
+                {turn.dashboard}
               </div>
-            );
-          }
-
-          return null;
-        })}
-
-        {/* ── AGUI Dashboard — rendered directly from render_dashboard tool call */}
-        {dashboardNode && (
-          <div className="w-full overflow-hidden rounded-xl border border-white/[0.07] bg-[#1a1a1a] p-3">
-            {dashboardNode}
+            )}
+            {/* Assistant text */}
+            {turn.text && (
+              <div className="max-w-[90%] self-start rounded-2xl rounded-bl-sm border border-white/[0.07] bg-[#1f1f1f] px-3.5 py-2.5 text-sm text-[#c0c0c0] leading-relaxed">
+                {renderMarkdown(turn.text)}
+              </div>
+            )}
           </div>
-        )}
+        ))}
 
-        {/* ── Optimistic user bubble ────────────────────────────────────── */}
-        {pendingUserMsg && !visible.some(
-          (m) => m.role === "user" && extractText(m.content).trim() === pendingUserMsg,
-        ) && (
+        {/* ── Current in-progress turn ──────────────────────────────────── */}
+        {pendingUserMsg && (
           <div className="flex justify-end">
             <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-[#2a2a2a] px-3.5 py-2.5 text-sm text-[#f0f0f0] leading-relaxed">
               {pendingUserMsg}
