@@ -137,6 +137,7 @@ export default function DashboardHeader() {
   const [ready, setReady] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const bellRef = useRef<HTMLDivElement>(null);
+  const bellIconRef = useRef<SVGSVGElement>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const { play } = useSound();
 
@@ -144,6 +145,19 @@ export default function DashboardHeader() {
   const markAllRead    = useNotificationStore((s) => s.markAllRead);
   const clearAll       = useNotificationStore((s) => s.clear);
   const unreadCount    = notifications.filter((n) => !n.read).length;
+
+  // Re-trigger shake animation every 4s when there are unread notifications
+  useEffect(() => {
+    if (!unreadCount || bellOpen) return;
+    const id = setInterval(() => {
+      const el = bellIconRef.current;
+      if (!el) return;
+      el.classList.remove("bell-shake");
+      void (el as unknown as HTMLElement).offsetWidth; // reflow to restart animation
+      el.classList.add("bell-shake");
+    }, 4000);
+    return () => clearInterval(id);
+  }, [unreadCount, bellOpen]);
 
   // Close popover when clicking outside
   useEffect(() => {
@@ -228,18 +242,22 @@ export default function DashboardHeader() {
             type="button"
             aria-label="Notifications"
             onClick={() => { play("pop"); setBellOpen((o) => !o); }}
-            className={`relative flex h-8 w-8 items-center justify-center rounded-lg transition ${
+            className={`relative flex h-10 w-10 items-center justify-center rounded-xl transition ${
               bellOpen
                 ? "bg-white/[0.08] text-[#d8d8d8]"
                 : "text-[#909090] hover:bg-white/[0.06] hover:text-[#d8d8d8]"
             }`}
           >
-            <svg className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
+            <svg
+              ref={bellIconRef}
+              className="h-[22px] w-[22px]"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
             </svg>
             {/* Unread badge */}
             {unreadCount > 0 && (
-              <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-violet-500 text-[9px] font-bold text-white leading-none">
+              <span className="absolute right-1 top-1 flex h-[18px] w-[18px] items-center justify-center rounded-full bg-violet-500 text-[10px] font-bold text-white leading-none shadow-[0_0_8px_rgba(139,92,246,0.6)]">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
             )}
@@ -272,8 +290,9 @@ export default function DashboardHeader() {
                 )}
               </div>
 
-              {/* List */}
-              <div className="max-h-[400px] overflow-y-auto">
+              {/* List — max 3 items visible, then scroll */}
+              <div className="max-h-[264px] overflow-y-auto overscroll-contain scrollbar-thin"
+                style={{ scrollbarWidth: "thin", scrollbarColor: "rgba(139,92,246,0.25) transparent" }}>
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
                     <svg className="h-8 w-8 text-[#3a3a3a]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.4}>
@@ -336,7 +355,7 @@ export default function DashboardHeader() {
         {/* User avatar + info */}
         <button
           type="button"
-          onClick={() => setProfileOpen(true)}
+          onClick={() => { play("pop"); setProfileOpen(true); }}
           className="flex items-center gap-2.5 rounded-xl border border-transparent px-2 py-1.5 transition hover:border-white/[0.08] hover:bg-white/[0.04]"
         >
           <div className="relative h-7 w-7 shrink-0">

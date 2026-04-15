@@ -84,7 +84,7 @@ export default function CrmDashboard() {
             {/* Expand / Collapse button */}
             <button
               type="button"
-              onClick={() => setChatFullscreen((f) => !f)}
+              onClick={() => { play(chatFullscreen ? "toggle-off" : "toggle-on"); setChatFullscreen((f) => !f); }}
               className="rounded-lg border border-white/[0.07] bg-white/[0.04] p-1.5 text-[#6b6b6b] transition hover:bg-white/[0.08] hover:text-[#c0c0c0]"
               aria-label={chatFullscreen ? "Exit full screen" : "Expand to full screen"}
             >
@@ -156,7 +156,7 @@ export default function CrmDashboard() {
               src="/ai-chat-analytics.svg"
               alt=""
               aria-hidden
-              className="h-[7rem] w-[7rem] shrink-0 select-none opacity-90"
+              className="h-[8rem] w-[8rem] shrink-0 select-none"
               width={180}
               height={180}
               draggable={false}

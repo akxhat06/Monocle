@@ -654,60 +654,62 @@ export default function DashboardMain() {
         {/* 2. Questions by Channel — 1/3 width */}
         <div className="rounded-2xl border border-white/[0.07] bg-[#1a1a1a] p-4"
           style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.35)" }}>
-          <div className="mb-3">
+          <div className="mb-4">
             <h2 className="text-sm font-semibold text-[#f0f0f0]">Questions by Channel</h2>
             <p className="text-[11px] text-[#4a4a4a] mt-0.5">Voice vs Chat breakdown</p>
           </div>
           {chartsLoading ? (
-            <div className="h-36 animate-pulse rounded-xl bg-white/[0.03]" />
+            <div className="flex flex-col gap-3">
+              <div className="h-2 w-full animate-pulse rounded-full bg-white/[0.05]" />
+              <div className="h-2 w-full animate-pulse rounded-full bg-white/[0.05]" style={{ animationDelay: "0.15s" }} />
+              <div className="mt-3 h-8 w-1/2 animate-pulse rounded-lg bg-white/[0.04]" style={{ animationDelay: "0.3s" }} />
+            </div>
           ) : channelRows.length === 0 ? (
             <div className="flex h-36 items-center justify-center text-xs text-[#3a3a3a]">No data</div>
-          ) : (
-            <>
-              <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={channelRows} layout="vertical"
-                  margin={{ top: 0, right: 4, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false}/>
-                  <XAxis type="number" stroke="transparent"
-                    tick={{ fill: "#4a4a4a", fontSize: 10 }} tickLine={false}
-                    axisLine={false} tickFormatter={fmtTick}/>
-                  <YAxis type="category" dataKey="channel" stroke="transparent"
-                    tick={{ fill: "#c0c0c0", fontSize: 12 }} tickLine={false} width={44}/>
-                   <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} itemStyle={TOOLTIP_ITEM_STYLE}
-                    formatter={(v) => [fmtTick(Number(v)), "Questions"]}
-                    cursor={{ fill: "rgba(255,255,255,0.03)" }}/>
-                  <Bar dataKey="questions" radius={[0, 6, 6, 0]} maxBarSize={28}>
-                    {channelRows.map((r, i) => (
-                      <Cell key={i} fill={i === 0 ? "#a78bfa" : "#60a5fa"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-              {/* Legend with % split */}
-              {channelRows.length >= 2 && (() => {
-                const total = channelRows.reduce((s, r) => s + r.questions, 0);
-                return (
-                  <div className="mt-4 flex flex-col gap-2">
-                    {channelRows.map((r, i) => (
-                      <div key={r.channel} className="flex items-center justify-between text-xs">
+          ) : (() => {
+            const COLORS = ["#a78bfa", "#60a5fa"];
+            const total = channelRows.reduce((s, r) => s + r.questions, 0);
+            return (
+              <div className="flex flex-col gap-3">
+                {/* Radial progress bars */}
+                {channelRows.map((r, i) => {
+                  const pct = total > 0 ? (r.questions / total) * 100 : 0;
+                  const color = COLORS[i % COLORS.length];
+                  return (
+                    <div key={r.channel} className="flex flex-col gap-1.5">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full inline-block flex-shrink-0"
-                            style={{ background: i === 0 ? "#a78bfa" : "#60a5fa" }}/>
-                          <span className="text-[#a0a0a0]">{r.channel}</span>
+                          <span className="h-2 w-2 rounded-full shrink-0" style={{ background: color }} />
+                          <span className="text-[12px] font-medium text-[#c0c0c0]">{r.channel}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="text-[#f0f0f0] font-medium tabular-nums">{fmtTick(r.questions)}</span>
-                          <span className="text-[#4a4a4a] tabular-nums">
-                            {total > 0 ? `${((r.questions / total) * 100).toFixed(0)}%` : "—"}
-                          </span>
+                          <span className="text-[12px] font-semibold tabular-nums text-[#f0f0f0]">{fmtTick(r.questions)}</span>
+                          <span className="text-[11px] tabular-nums text-[#4a4a4a] w-8 text-right">{pct.toFixed(0)}%</span>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </>
-          )}
+                      {/* Track + fill bar */}
+                      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+                        <div
+                          className="absolute left-0 top-0 h-full rounded-full transition-all duration-700 ease-out"
+                          style={{
+                            width: `${pct}%`,
+                            background: `linear-gradient(90deg, ${color}99, ${color})`,
+                            boxShadow: `0 0 8px ${color}66`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Total */}
+                <div className="mt-2 flex items-center justify-between border-t border-white/[0.05] pt-3">
+                  <span className="text-[11px] text-[#4a4a4a] uppercase tracking-wider">Total</span>
+                  <span className="text-[15px] font-bold tabular-nums text-[#f0f0f0]">{fmtTick(total)}</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 

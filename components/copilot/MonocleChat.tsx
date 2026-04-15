@@ -414,6 +414,21 @@ export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: b
   const [input, setInput] = useState("");
   const [pendingUserMsg, setPendingUserMsg] = useState<string | null>(null);
 
+  // ── Greeting bubble — shown once per session ──────────────────────────────
+  const [showGreeting, setShowGreeting] = useState(false);
+  const [greetingVisible, setGreetingVisible] = useState(false);
+
+  useEffect(() => {
+    const key = "monocle-greeted";
+    if (typeof sessionStorage !== "undefined" && !sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, "1");
+      // Slight delay so the panel animates in first
+      const t1 = setTimeout(() => setShowGreeting(true), 600);
+      const t2 = setTimeout(() => setGreetingVisible(true), 700);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    }
+  }, []);
+
   // ── Per-turn snapshot ─────────────────────────────────────────────────────
   // Each completed AI turn is snapshotted here so it persists when Q2 starts.
   type Turn = { key: string; userMsg: string; dashboard: React.ReactNode | null; text: string };
@@ -568,6 +583,31 @@ export default function MonocleChat({ isFullscreen = false }: { isFullscreen?: b
       {/* ── Message list ─────────────────────────────────────────────────── */}
       <div className="flex-1 min-h-0 overflow-y-auto scroll-smooth">
         <div className={`${fsCol} px-4 py-4 space-y-3`}>
+
+          {/* ── Greeting bubble ──────────────────────────────────────────── */}
+          {showGreeting && showEmptyState && (
+            <div
+              className={`flex items-end gap-2.5 transition-all duration-500 ease-out ${
+                greetingVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              {/* Bot avatar */}
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-violet-800 shadow-[0_0_12px_rgba(139,92,246,0.4)]">
+                <svg className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                </svg>
+              </div>
+              {/* Bubble */}
+              <div className="max-w-[85%] rounded-2xl rounded-bl-sm border border-violet-500/20 bg-violet-500/[0.08] px-4 py-3">
+                <p className="text-[13px] font-medium text-[#e0e0e0] leading-snug">
+                  Hey there! 👋 I&apos;m Monocle AI.
+                </p>
+                <p className="mt-1 text-[12px] text-[#8a8a8a] leading-relaxed">
+                  How can I help you today? Ask me anything about your data — calls, questions, errors, trends, or platform performance.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* ── Empty state ──────────────────────────────────────────────── */}
           {showEmptyState && (
